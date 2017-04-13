@@ -2,8 +2,8 @@
   <div id="site-menu">
     <div class="links">
       <nuxt-link to="/" class="button--gray" v-if="!isHome">Home</nuxt-link>
-      <nuxt-link to="/resume" class="button--gray">Résumé</nuxt-link>
-      <nuxt-link to="/about" class="button--gray">About</nuxt-link>
+      <nuxt-link to="/resume" class="button--gray" v-if="!isResume">Résumé</nuxt-link>
+      <nuxt-link to="/about" class="button--gray" v-if="!isAbout">About</nuxt-link>
 
     </div>
   </div>
@@ -21,6 +21,12 @@
     computed: {
       isHome: function () {
         return this.$route.path === '/';
+      },
+      isResume: function () {
+        return this.$route.path === '/resume';
+      },
+      isAbout: function () {
+        return this.$route.path === '/about';
       }
     }
   }
