@@ -47,7 +47,8 @@ jobs:
       - name: SCP Command to Transfer Files to Remote Server
         uses: appleboy/scp-action@v0.1.3
         with:
-          host: ${{ secrets.HOST }}
+          host: ${{ secrets.PUBLISH_SSH_HOST }}
+          port: ${{ secrets.PUBLISH_SSH_PORT }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.PUBLISH_SSH_KEY }}
           publish_dir: ./dist
