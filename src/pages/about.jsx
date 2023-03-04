@@ -50,7 +50,12 @@ export default () => (
         <a href={vars.my_public_repo}>{vars.my_public_repo}</a>. There you can
         witness the pure awesomeness that is Vite, React, styled-components and{" "}
         <a href="https://tailwindcss.com/">Tailwind CSS</a>. The backgrounds
-        were generated with <a href="https://app.haikei.app/">Haikei</a>.
+        were generated with <a href="https://app.haikei.app/">Haikei</a>. The
+        icon was generated with{" "}
+        <a href="https://danmarshall.github.io/google-font-to-svg-path/">
+          Google Font to Svg Path
+        </a>{" "}
+        and <a href="https://editor.method.ac/">Method Draw</a>.
       </p>
     </div>
   </section>

@@ -49,7 +49,7 @@ jobs:
         with:
           host: ${{ secrets.PUBLISH_SSH_HOST }}
           port: ${{ secrets.PUBLISH_SSH_PORT }}
-          username: ${{ secrets.USERNAME }}
+          username: ${{ secrets.PUBLISH_SSH_USER }}
           key: ${{ secrets.PUBLISH_SSH_KEY }}
           publish_dir: ./dist
           source: "dist/*"
