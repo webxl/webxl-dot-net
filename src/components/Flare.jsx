@@ -1,31 +1,13 @@
-<template>
-  <div id="flare">
-    <a href="https://github.com/webxl" target="_blank">
-      <span class="icon-github-circled"></span>
-    </a>
-    <a href="https://linkedin.com/in/webxl" target="_blank">
-      <span class="icon-linkedin-squared"></span>
-    </a>
-    <a href="https://twitter.com/mattmotherway" target="_blank">
-      <span class="icon-twitter-squared"></span>
-    </a>
-    <a href="mailto:site@webxl.net" target="_blank">
-      <span class="icon-mail-alt"></span>
-    </a>
-  </div>
-</template>
-<style lang="scss" scoped>
+import styled from "styled-components";
 
-  #flare {
-    text-align: center;
-  }
+
+const Wrapper = styled.div`
+  text-align: center;
 
   a span {
     color: lightgray;
   }
 
-  // first go to http://fontello.com/
-  // then `openssl base64 < ccnew.woff2 | tr -d '\n' | pbcopy`
   @font-face {
     font-family: 'icons';
     src: url(data:application/font-woff2;charset=utf-8;base64,d09GMgABAAAAAA9cAA8AAAAAHPgAAA8FAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHFQGVgCDcgggCZZwEQgKkkSPXwE2AiQDJAsUAAQgBYUpB4EWDIEGG3UaIxHCxgFAgl5E9lfYlOFeAIVlAQWakZtlw0QIt/eElTCEAOcc4AAAYB/4sKeBAgBARwwIsudrrv86V9qimDdDEPEOLiHgIYbEJjTDE+ObyE59J+pLcwiKNd37ZxlwiVARJj4pkGRNCskBjSdZYeuqdBXgPL/NcFG4TFZd6kWV59byde9w14C1OFfZ4FUE/D/avllRgqe54eF/Mpit5hv4OgmaWStqinq66mRws3R25wCCRg5oizq0Dy1wZ0zAM8f/WzPtzKTEKrKIQvasyv7NbvL/bO5ujre8KR7Ctpy7MityzJscoSuy6qusUCBcdZ2p8L7WFAJkW96wAlrsET4DBv3RzwICGDqMYeshOwX3yMzSFkoJ5tEE56q0fh4PQVukEzHDiZasSNpNn6CXABLYKfsUALwgKEXv6AzGqckUZrNra9MRWP/4C5Vv3B2y52XiVeocAJhXAAe06JNJ59K5j+EhtgTSkP0eYQ3gpGHEP/8g/PDgs9RfqHd38AdchcxC4pRrgfgHHsMJkkKlARUQ0knvTIEGf4CjQFsDBYaBAsfAhtDqQRSkYT1gKijwFykFFYuKPr5i2FaxBeMCnO+01QQQ+E7TLL35h/b6G5TPT4meBQ3/5VT9doJp919zVaRHdui8B/+ANhngwRIDBMzoNMCgY/G5LUT4aWjwBqdH053PyZt3fVCsbSWPlZ0YCAsG/rNqAqc7puHWuLJFxzSNjlTsc6gSuJ4XC+MtlTsy5WSEoo/1pZZsvjYHWc4G3tJJzgEOTYXQ7lhIbiWkRBSJZXdnKAoImE5ldVxlEiUN5gyeG4qmR/Czl+VQvVX6fd5qR6m2Sl7bqWy5bicnyzG2tZuW5CpkFFpfQAKVowFBs6By+SQSTUBiB0tOoRSKkOeACpVwJQeP/gmX6MVRrJKj08tENKVhUBuO03jbN/Q+dDS8ZShojcwAEVo07WviTtBbKQ2LlizGXGC1TQW4WjfJfkcczyp8L9gDi2ptsGbONwgkDo564Tl5Zz7f9gEXKgueiXSTgBtQJOHka0M75knMuK74B3eVD3ggvM2Rq3/CpUW+M9ws6k+EW6IFvHizl6rIJvkqrtx+BHLwZju92X2gnF/58ibORUVncj/s8VqH4ojHMiBMY3W63BUPGpvgupVqw+UiNPZdC3lWOXuD4rPl4iB5OtMt5lrgXHecS2J0U106r5kKl2cTiOAykKn30zeQh4UqmN5LeCRqikMihkBRVIHi397uItp4xP6k5pabyY7clRzIR8VgFChApYAVCsaKBGfFQrASIVmpUFiZUFm50FiF0HMqscCutlLwKr7mJgisBsB7AFgDgD4ArAXAOgCsB8AGgMWN0MpYYk1lCt5I4/zluL2jFNE4oFY0gyaz78450AJprqaOWvfUPqbqHquNlYWB1vZflca0nKHR3Ypt1dYiMR4vboce6XgFHVggnjM+PmQ5giyK8S+YnlNr9rS2+4Lbgc46H4jmOq4A7J5yj7rQXlgJdCdzIB4lbaUHlbnxNbWaAxmyK171z3s1y+6UPq57mCGJQ7en0dnbgV6AMUJtPdoTnaOTvk2klV7NFn1R6WoXeUJITDFHnLySa1rb6SfbLpvOayNcLs0xmtCoviblZdqsIPgWKSiC7EPcg7EcG5zdcZTD2LkzlXeXmOndnUmI0Gb9hqbcmcHU1wvYb9HUsvcxW7AEDlI7J2YCTRnURmoJNM/aev9ar5hoDvTXPyxzPjKknK08DQw8ctAkysMzICfoKTnYXFB6ozXd+EqtVsy7O3NF0sNsbqXo1VavPleDnVTrqDV6RdNvfmCo8GR2C5Wv3ZjVM7sxbximtsW6mu0kreS2Nvv8UWDk0Wxb2xhNWXv8mcdAr2VYahz0WZ8rDBRN01pEEwi2NFvAGl1my8LAqmxaUWtPs7q+/U3VihqH4V8xH3lQdvhIUSv2vrF+X2f6rB9NNIRZdzGZ6W1m1CFUXT5ljV6ZaQPegnflTEvnOTAtc880FT7/DF1nZ7ahx2dzboynplazXgNjnjbfDEXF3LbUQjPA+Y98UXi2JOkOl9GhlXg+IVZB0BoArQPQBnxMbAK0BUDbABSAW2IHoCAA7QLQHnxS7AN0AECHAHQEHxfHAJ0AUAhg+WlDfxNT+EIxHPoifERGx5Im+CiLpQykpDg68iwE5DmwZxd9B+nyoCMTBiCTACzVd4jSBx2ZMQB5H6BKtvmpF4MfRXHiCC0HlfvWHvoqyW0Fob9LPo/UF5jrsLr+rJFxB5gozvwn14Nwa7iGpQhBXieRT9V1dVWILVUSt7Sq3Sschd5tBxlsGQiSOv/xPbrFC43nofl4CityPJ8bTRvZkfcuaH5HPNVveJ/3GZK3Qw4H3a65y56/AoSp5eBzD1zClTgRO3vqNy949vTnL3z60FPffaH46eQL1pMGAgtwnL3zDb6tky6v16Xxqy3pleM66bx2PfpgdHp5pT5D2HibK7BiVMEBL3EP6dHhOgtaxZQcO5JjB4iBDffIz+IrYlvsoCgAO1xBIptDELCejuIUCmxbNTX3WbERHNjmik+bm08i4XjtrEazSz+AGJjp8Kg2QMuRXj1BrZYWgmKYpiZW4zwSv6ejC9QGTTaqRZIEi8UHXC1cA8UsuLjb1+ZzeHAr0QovuJxdZYWXY1XZEuxldxVkFZKssSFoNT2EFcgR99mJGXUM9rr3enw82l3efq+s0tIW79Wik5a9pBE8Bqo+f+V0uXsf1O0+iKwbszVJcoIHSKi0xIPwQBUQraIFcNlHIiPNtCspfe0+aj1dCSF7JGYocwgGKKnAEAwi/aIBkMIZ6rJcmFRA0qeqaMP58rSFfSAH6ImcyESRWXL8equoddzMCYQjWlpbA6K0wK9N1Eb8fKjq/C57QJi1tbaNOYlke5LNZYXSItm+wOYLbqbXHmup8Lpwqx4SyfJPmMn2xbUoPGEmxyft5gx7DNQM+YZzziTRnhZuFuapnmSYk2ZuRnelPGcN+bzMm4M7snYMZ2ZDPvC2QUXFHNufpwjmTOxmDaNraw3+prWVhi9a/34+MzAzMHdq3tcr+VXQSWaCJvN3iWSK9uddmt1mCHNgdKh+7kyANmdGbA1ieZSxWCcPgqeFQbS4IFdXT9ysvq50it7axiSLTKjDIanDxeoBrePu1nNpW//f+NVgzCsnwSvZm/9hkCtkU3Vgz4HdJVJ7pBr01sAzE6dPjjELyu6zbR/dNc56Tn8yzNXXjYLChkIvfulIiA88lshc+fl016EwJ+0ow+z/RFo7ZqlNir62Xqee1mWaunbkbt2yR5eVQh11NaAo/P0W27L7BczTYyNX1/arhyarSmKBrrV7he5pRXhRm9v8+bloaSk/mSZr7DL+t5JboXkoEJ7ss3AL9jSnSfYhT2eeE+f5fTdM/7qEgV83+9m2sM7sr0WD9h5JBStXXCO7VW8PM+pN+ZUpF8BtvCxy7K+oG17nzT+06/Nttn7x71v37R9NBfIik5Pw9mb54/4P/Qeyqt/yVbLt9z/4q1P91QcHav+07vn8es/pWLJ+2d+/XXbs8jS888XFE4eHEygaHh77T3/406eP3D799rk3zuuxD+vXJqoPZn56ey+wvjOx1GDRwG0+Hd7+sGAwW1bsD4rD59UKzEe27v21rCJ3vtXH8yrYbHUVq8jTK7bKKK+kyMV17eLVHxcXOrlWkKNyKTR5lO9VuPA4OCeIOCql3NzKoEmVlc45t8E4UL5of4auq3w+m0lexGPhk8P9wOby0vTU+NjoyPDQ4EB/X29PZ3tjfc29arOqsqK8rLSkuKjwSzYzN8f4Et57sqLZKleIQOMg0znRFEDSKGI5OUwWNlv9hSR5AQmZT0zwJIw/Hj+BJBIpjsCAzYIlCAKz1M7NU/5YiixtthztJEhTGXgyu/i+4rWgVQsRMhvvpEKcgaVIliSDHkh2BArnHACX+c7i+0oTJu07EZBK/CtpvsxqBGWUhshFOpHDmNxYd0OyAFjOFnZ3raLNzdXVzYDl395a3XjF62uDA7k5msxvtuK+yrICISjqYpxdkKrMklTFLEQwEiwJlpJtX4KrL6FcQimJkZdQc5r5EjJPaQTCLf/JQIsgNEO42r2fmZka6O/saGmuKMdmbOqFOE06mKKcWXCeLA0WLA0CmgUFgkCW+j11vqFu0fIPOW71KIJJQsHEpooSvRL6SAoxC8KQTj5gZgdQIieAkgUBmtOAKpxQSlXZguLnBKG68ZZ6h+9V5xcW5hfpXT9qsZA0WkmmxCUlUYt4FZIMLDXYSW3jk8bpSBUMeo2NoIfQF6HTZ7o7mhtqc/NqcrvzcrwORca/ut5Iz7/8jceekb9pDv6HSRG+m98YEgnu/t4dSv/IU4HPdgup9X9sbfD/GPYntDNN0lV48GcA7A3gT074inS+m1r+DzRDf8F83cPfMSZlpmy5ynov+K/jwlw/UxvpTQ0eyqvgfByjGhrHSX4ues+MkxwWUSESYJyh2X7HDnmeBXCU6QAuvHYyjhjBxzHucCGX9S5DQe/acVJhtKNC7+lxhkCsPpZDXbwzLJ15OHseP7PNhslGs6ujs988fdhM376t81QoYYau7bN09sq0zFg6ZUcTiXRbOJ0Mh1PRm41o/DoRygp9mygQzV6dp1NmZ1vHNHU26uZlQ3Y0oqyDqwfxLtuOmbFsOmnOqPkpM5NNX0TDdtuZbWeG2tvVv0ZMSst4WNa5uDM2U4NJjUxdOnTqZzr1sBdJp3CfSwlJMMm/ZjuT5l4xWQJji9IptqjENjetTdjjyVnDUqJubNw87lpCSFa2XogBAcrkuZqLmzq16Yjjs8DcrFAhKRH97CsP5nYX25IxTWS24GOZZnSaa8rI8cLID7O11by0LWNIu1WnOgRfE6cBGMy3pgcjToIkKaSSRjoZ0JZDiWgqEsrqiWjMbj1NJyLO0BU+z4YT0YiMWjtru+Pn9tn16YNH1JKh80RrKGF77Jtz245mW6/uX4ey0Yg3cZ669AOuedMugMVXfGEj+H6iF218H/11j26/H/LPW5qmY8EHDUbabKAbbmXwCfY5EH3B1EGwXBxTLz56TsovzhXPCb6fR3aizuMT2lMAZdZzwlsPbEwtma1/0MnI2fQxunsm4oUtDFM=) format('woff2'),
@@ -72,12 +54,68 @@
     /* text-shadow: 1px 1px 1px rgba(127, 127, 127, 0.3); */
   }
 
-  .icon-calendar:before { content: '\e800'; } /* '' */
-  .icon-left-bold:before { content: '\e801'; } /* '' */
-  .icon-left-circled:before { content: '\e802'; } /* '' */
-  .icon-alert:before { content: '\e803'; } /* '' */
-  .icon-github-circled:before { content: '\f09b'; } /* '' */
-  .icon-mail-alt:before { content: '\f0e0'; } /* '' */
-  .icon-twitter-squared:before { content: '\f304'; } /* '' */
-  .icon-linkedin-squared:before { content: '\f30c'; } /* '' */
-</style>
+  .icon-calendar:before {
+    content: '\\e800';
+  }
+
+  /* '' */
+
+  .icon-left-bold:before {
+    content: '\\e801';
+  }
+
+  /* '' */
+
+  .icon-left-circled:before {
+    content: '\\e802';
+  }
+
+  /* '' */
+
+  .icon-alert:before {
+    content: '\\e803';
+  }
+
+  /* '' */
+
+  .icon-github-circled:before {
+    content: '\\f09b';
+  }
+
+  /* '' */
+
+  .icon-mail-alt:before {
+    content: '\\f0e0';
+  }
+
+  /* '' */
+
+  .icon-twitter-squared:before {
+    content: '\\f304';
+  }
+
+  /* '' */
+
+  .icon-linkedin-squared:before {
+    content: '\\f30c';
+  }
+
+  /* '' */
+`;
+
+const Flare = () => (<Wrapper  className="h-20">
+    <a href="https://github.com/webxl" target="_blank">
+        <span className="icon-github-circled"></span>
+    </a>
+    <a href="https://linkedin.com/in/webxl" target="_blank">
+        <span className="icon-linkedin-squared"></span>
+    </a>
+    <a href="https://twitter.com/mattmotherway" target="_blank">
+        <span className="icon-twitter-squared"></span>
+    </a>
+    <a href="mailto:site@webxl.net" target="_blank">
+        <span className="icon-mail-alt"></span>
+    </a>
+</Wrapper>);
+
+export default Flare;
