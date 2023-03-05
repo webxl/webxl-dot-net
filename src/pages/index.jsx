@@ -1,4 +1,4 @@
-import Name from "../components/Name.jsx";
+import Name from "../components/name.jsx";
 import styled from "styled-components";
 import { colors } from "../style-vars";
 

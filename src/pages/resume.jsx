@@ -1,5 +1,5 @@
 import resumeData from "./resume.json";
-import Name from "../components/Name.jsx";
+import Name from "../components/name.jsx";
 import styled from "styled-components";
 
 const Wrapper = styled.div`
@@ -16,8 +16,8 @@ const Wrapper = styled.div`
     margin-bottom: 10px;
   }
   @media (min-width: 40rem) {
+    text-align: right;
     .date-range {
-      text-align: right;
     }
   }
 `;

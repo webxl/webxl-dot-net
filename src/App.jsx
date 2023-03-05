@@ -1,4 +1,3 @@
-import "./App.css";
 import styled from "styled-components";
 import bgImage from "./assets/blurry-gradient-haikei.svg";
 import flareBgImage from "./assets/layered-waves-haikei.svg";
@@ -8,16 +7,24 @@ import { useRoutes } from "react-router-dom";
 
 import routes from "~react-pages";
 import { colors } from "./style-vars.js";
-import SiteMenu from "./components/SiteMenu.jsx";
-import Flare from "./components/Flare.jsx";
+import SiteMenu from "./components/siteMenu.jsx";
+import Flare from "./components/flare.jsx";
+
+const App = () => {
+  return (
+    <Suspense>
+      <BackgroundWrapper className="flex flex-col h-screen justify-between">
+        <div className="fg-wrapper flex flex-col h-screen justify-between">
+          {useRoutes(routes)}
+          <SiteMenu />
+          <Flare />
+        </div>
+      </BackgroundWrapper>
+    </Suspense>
+  );
+};
 
 const BackgroundWrapper = styled.div`
-  word-spacing: 1px;
-  -ms-text-size-adjust: 100%;
-  -webkit-text-size-adjust: 100%;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-font-smoothing: antialiased;
-  box-sizing: border-box;
   height: 100vh;
   overflow: hidden;
 
@@ -33,24 +40,11 @@ const BackgroundWrapper = styled.div`
     height: 100vh;
   }
 
-  footer {
-    flex: none;
-  }
-
   .content {
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
     overflow: auto;
     max-height: 60vh;
-  }
-
-  .links {
-    padding-top: 15px;
-    text-align: center;
-
-    a {
-      margin-right: 10px;
-    }
   }
 
   ul {
@@ -67,19 +61,5 @@ const BackgroundWrapper = styled.div`
     color: ${colors.primaryColor};
   }
 `;
-
-const App = () => {
-  return (
-    <Suspense fallback={<p>Loading...</p>}>
-      <BackgroundWrapper className="flex flex-col h-screen justify-between">
-        <div className="fg-wrapper flex flex-col h-screen justify-between">
-          {useRoutes(routes)}
-          <SiteMenu />
-          <Flare />
-        </div>
-      </BackgroundWrapper>
-    </Suspense>
-  );
-};
 
 export default App;

@@ -1,5 +1,5 @@
 import pkg from "../../package.json";
-import Name from "../components/Name.jsx";
+import Name from "../components/name.jsx";
 
 const vars = {
   my_public_repo: pkg.url,
@@ -14,8 +14,7 @@ export default () => (
   <section className="container mx-auto content-start px-4" id="about">
     <Name />
     <div className="content container px-6 py-4">
-      <h2 className="text-2xl mb-3">About</h2>
-      <h3 className="text-xl mb-3">Me</h3>
+      <h2 className="text-2xl mb-3">About Me</h2>
       <p className="mb-3">
         I'm a professional software engineer specializing in web applications,
         but have a strong DevOps background as well having set up a few high-end
@@ -30,6 +29,14 @@ export default () => (
         and security. My hobbies include skiing, hiking, golfing, economics and
         3d printing.
       </p>
+      <h3 className="text-xl mb-3">webXL</h3>
+      <p className="mb-3">
+        I ran a consulting company called webXL from 2008 to 2010 to help
+        companies with their CRM implementations and online presence. I've since
+        moved on to other things, but I still host and maintain a few sites for
+        old clients.
+      </p>
+
       <h4 className="text-xl mb-3">Profiles</h4>
       <ul className="mb-4" style={{ listStyle: "circle inside" }}>
         {vars.profile_links.map((link, name) => (
