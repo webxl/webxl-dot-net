@@ -1,5 +1,6 @@
 import pkg from "../../package.json";
 import Name from "../components/name.jsx";
+import SiteMenu from "../components/siteMenu";
 
 const vars = {
   my_public_repo: pkg.url,
@@ -13,6 +14,7 @@ const vars = {
 export default () => (
   <section className="container mx-auto content-start px-4" id="about">
     <Name />
+    <SiteMenu />
     <div className="content container px-6 py-4">
       <h2 className="text-2xl mb-3">About Me</h2>
       <p className="mb-3">

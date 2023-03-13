@@ -7,18 +7,14 @@ import { useRoutes } from "react-router-dom";
 
 import routes from "~react-pages";
 import { colors } from "./style-vars.js";
-import SiteMenu from "./components/siteMenu.jsx";
 import Flare from "./components/flare.jsx";
 
 const App = () => {
   return (
     <Suspense>
-      <BackgroundWrapper className="flex flex-col h-screen justify-between">
-        <div className="fg-wrapper flex flex-col h-screen justify-between">
-          {useRoutes(routes)}
-          <SiteMenu />
-          <Flare />
-        </div>
+      <BackgroundWrapper>
+        <div className="content-container">{useRoutes(routes)}</div>
+        <Flare />
       </BackgroundWrapper>
     </Suspense>
   );
@@ -26,25 +22,39 @@ const App = () => {
 
 const BackgroundWrapper = styled.div`
   height: 100vh;
-  overflow: hidden;
 
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
 
-  background-image: url(${bgImage});
-  background-size: cover;
-
-  .fg-wrapper {
-    background-image: url(${flareBgImage});
+  .content-container {
+    background-image: url(${flareBgImage}), url(${bgImage});
     background-size: cover;
-    height: 100vh;
+    background-attachment: fixed;
+
+    min-height: 100vh;
+    overflow: auto;
+    position: relative;
+
+    padding: 20px 20px 150px;
+  }
+
+  .footer--pin {
+    position: relative;
+    z-index: 0;
+    left: 0;
+    bottom: 0;
+    background-size: cover;
+    background-attachment: fixed;
+    margin-top: -80px;
+
+    @media (max-width: 640px) {
+      margin-top: -160px;
+    }
   }
 
   .content {
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
-    overflow: auto;
-    max-height: 60vh;
   }
 
   ul {

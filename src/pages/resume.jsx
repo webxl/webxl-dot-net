@@ -1,6 +1,7 @@
 import resumeData from "./resume.json";
 import Name from "../components/name.jsx";
 import styled from "styled-components";
+import SiteMenu from "../components/siteMenu";
 
 const Wrapper = styled.div`
   li {
@@ -15,11 +16,6 @@ const Wrapper = styled.div`
   .summary {
     margin-bottom: 10px;
   }
-  @media (min-width: 40rem) {
-    text-align: right;
-    .date-range {
-    }
-  }
 `;
 
 export default () => {
@@ -28,7 +24,8 @@ export default () => {
     <Wrapper className="container mx-auto content-start px-4">
       <div>
         <Name />
-        <div className="content mx-auto content-start px-4">
+        <SiteMenu />
+        <div className="content mx-auto content-start px-6 py-4">
           <h2 className="text-2xl my-3">Résumé</h2>
 
           <h4 className="text-xl mb-3">
