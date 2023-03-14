@@ -18,12 +18,11 @@ export default () => (
     <div className="content container px-6 py-4">
       <h2 className="text-2xl mb-3">About Me</h2>
       <p className="mb-3">
-        I'm a professional software engineer specializing in web applications,
-        but have a strong DevOps background as well having set up a few high-end
-        Sun servers back in the dotcom days (for literally 10s of users). The
-        money ran out before that spike came, but we were ready, by golly! I
-        spent a few years in Los Angeles learning the LAMP stack and JavaScript
-        before joining a CRM company.
+        I'm a full-stack software engineer specializing in web and mobile apps,
+        but I also have a vast DevOps background that stretches back to the
+        dotcom days. After leaving Silicon Valley in the early 2000s, I spent a
+        few years in Los Angeles learning the LAMP stack and JavaScript
+        frameworks before joining a CRM company as a full-fledged developer.
       </p>
       <p className="mb-3">
         I currently live in Reno, NV with my crazy-beautiful wife and kids. My
