@@ -1,8 +1,9 @@
 {
   "highlights": [
-    "Proven track record of delivering sophisticated, yet easy-to-use user interfaces.",
-    "Worked at various capacities on several successful SAAS products and developed a full appreciation of the software development lifecycle, from requirements gathering to test automation.",
-    "Innate ability to find elegant solutions that aid in the understanding and usefulness of large datasets and complex analytics."
+    "Proven track record of delivering sophisticated, yet easy-to-use user interfaces",
+    "Worked at various capacities on several successful SAAS products",
+    "Possess a full understanding and appreciation of the software development lifecycle, from requirements gathering to test automation",
+    "Innate ability to find elegant solutions that aid in the understanding and usefulness of large datasets and complex analytics"
   ],
   "work": [
     {
@@ -11,16 +12,15 @@
       "position": "Software Engineer",
       "website": "https://usesilo.com",
       "startDate": "2021-09-01",
-      "endDate": "",
       "dateRange": "September 2021 - Present",
-      "summary": "Software Engineer: currently developing ERP software for the produce industry using React and Go on the Payments and Capital teams. Helping small and medium-size food distributors get paid faster by developing passwordless payment portals, automated overdue invoice reminders and statements."
+      "summary": "Currently developing ERP software for the produce industry using React and Go on the Payments and Capital teams. Helping small and medium-size food distributors get paid faster by developing password-less payment portals, automated overdue invoice reminders and statements."
     },
     {
       "company": "Informa Investment Solutions",
       "location": "Zephyr Cove, NV",
       "position": "Senior Software Engineer",
       "website": "https://informais.com",
-      "startDate": "2010-5-01",
+      "startDate": "2010-05-01",
       "endDate": "2021-08-31",
       "dateRange": "May 2010 - August 2021",
       "summary": "Lead UX engineer for flagship financial software platform. Created a 'living' style guide and suite of UI patterns for use in multiple front-end UI frameworks. Work with multiple engineering and product teams to ensure consistency and usability across components, as well as implement key interface components.",
@@ -35,8 +35,8 @@
       "location": "Reno, NV",
       "position": "Principal",
       "website": "https://webxl.net",
-      "startDate": "2008-9-01",
-      "endDate": "2010-4-30",
+      "startDate": "2008-09-01",
+      "endDate": "2010-04-30",
       "dateRange": "December 2008 – May 2010",
       "summary": "On behalf of clients, analyzed business processes and requirements, provided code-level customizations and performed data migration services for open source CRM suite SugarCRM. Sample customizations using the PHP based framework included developing logic hooks to permit data synchronization with an accounting application over SOAP, dynamic dropdown lists based on user input, order processing and license management automation, and “Cloud Connector” integration to display third party credit information of prospective customers."
     },
@@ -45,8 +45,8 @@
       "location": "Cupertino, CA",
       "position": "Professional Services Engineer",
       "website": "http://sugarcrm.com",
-      "startDate": "2007-5-30",
-      "endDate": "2010-4-30",
+      "startDate": "2007-05-30",
+      "endDate": "2010-04-30",
       "dateRange": "May 2007 - October 2008",
       "summary": "Customized installations of SugarCRM to meet client requirements. Solutions consisted of various PHP and JavaScript modifications and custom object-oriented modules specific to business practices, as well as data migration and third party integration."
     },
@@ -55,8 +55,8 @@
       "location": "Los Angeles, CA",
       "position": "Release Manager",
       "website": "http://web.scalable-networks.com/",
-      "startDate": "2002-9-01",
-      "endDate": "2007-5-30",
+      "startDate": "2002-09-01",
+      "endDate": "2007-05-30",
       "dateRange": "September 2002 - May 2007",
       "summary": "Responsible for the configuration and release management of an advanced network simulation application.  Produced specialized releases for service contracts in addition to several generic releases and optional modules for each product version. Automated build process on multiple platforms reducing the amount of time between releases and improving product quality.  Ensured products perform to specification on a variety of operating systems and architectures.  Wrote numerous scripts (Unix Shell, Perl, Batch) and dynamic web pages (PHP, DHTML) to manage release processes and configurations."
     }

@@ -55,7 +55,7 @@ export default () => {
             </div>
           ))}
 
-          <h3>Education</h3>
+          <h3 className="text-2xl my-6">Education</h3>
 
           {education.map((pos, i) => (
             <div key={i}>
