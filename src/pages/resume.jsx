@@ -29,7 +29,7 @@ export default () => {
           <h2 className="text-2xl my-3">Résumé</h2>
 
           <h4 className="text-xl mb-3">
-            Full-stack web application developer with over a decade of SAAS
+            Full-stack web application developer with 15+ years SaaS
             experience
           </h4>
 
