@@ -35,7 +35,7 @@ export default () => (
         I ran a consulting company called webXL from 2008 to 2010 to help
         companies with their CRM implementations and online presence. I've since
         moved on to other things, but I still host and maintain a few sites for
-        old clients.
+        old clients and freelance for local businesses.
       </p>
 
       <h4 className="text-xl mb-3">Profiles</h4>

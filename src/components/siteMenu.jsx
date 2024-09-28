@@ -28,6 +28,13 @@ export default ({ isLanding }) => {
       >
         About
       </StyledLink>
+      <StyledLink
+        to="/portfolio"
+        className={btnClass}
+        hidden={pathname === "/portfolio"}
+      >
+        Portfolio
+      </StyledLink>
     </div>
   );
 };

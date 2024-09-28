@@ -4,6 +4,7 @@
   "description": "The Matt Motherway Project",
   "author": "Matt Motherway",
   "private": true,
+  "type": "module",
   "url": "https://github.com/webxl/webxl-dot-net",
   "scripts": {
     "dev": "nodemon --watch ../../dist/*.js -x 'DEBUG=vite-plugin-pages:* vite'",
