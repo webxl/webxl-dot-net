@@ -86,7 +86,7 @@ export default () => (
         </a>
       </p>
       <p className="mb-4">
-        <a href="https://btc-charts.vercel-lovat.app/">BTC Charts</a> is a simple web
+        <a href="https://btc-charts-lovat.vercel.app/">BTC Charts</a> is a simple web
         application that allows you to view historical price data for Bitcoin
         (BTC) while comparing it to a popular trend line known as the Power Law.
         You can also configure the x and y axes to display in logarithmic scale.
