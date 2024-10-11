@@ -39,7 +39,6 @@ const App = () => {
 };
 
 const BackgroundWrapper = styled.div`
-  min-height: 100vh;
 
   font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -51,8 +50,7 @@ const BackgroundWrapper = styled.div`
     background-repeat: repeat-x;
 
     min-height: 100vh;
-    overflow: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
 
     padding: 20px 20px 150px;
@@ -73,9 +71,10 @@ const BackgroundWrapper = styled.div`
   }
 
   .page-wrapper {
-    position: relative;
     height: 100%;
     z-index: 20;
+    position: relative;
+    margin-bottom: 100px;
   }
 
   .content {
@@ -103,7 +102,7 @@ const BackgroundWrapper = styled.div`
     background-attachment: fixed;
     min-height: 100vh;
     position: absolute;
-    top: -300px;
+    top: -500px;
     left: -100px;
     right: -100px;
     bottom: 0;
