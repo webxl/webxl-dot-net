@@ -13,8 +13,8 @@ import Flare from "./components/flare.jsx";
 
 const App = () => {
   const rockingX = useSpring({
-    from: { x: 0, scale: 1.2, opacity: 0.3 },
-    to: { x: 100, scale: 1.2, opacity: 0.7 },
+    from: { x: -50, scale: 1.2, opacity: 0.3 },
+    to: { x: 50, scale: 1.2, opacity: 0.7 },
     loop: { reverse: true },
     config: {
       mass: 200,
@@ -103,7 +103,7 @@ const BackgroundWrapper = styled.div`
     background-attachment: fixed;
     min-height: 100vh;
     position: absolute;
-    top: -200px;
+    top: -300px;
     left: -100px;
     right: -100px;
     bottom: 0;
