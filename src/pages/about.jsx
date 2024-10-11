@@ -12,7 +12,7 @@ const vars = {
 };
 
 export default () => (
-  <section className="container mx-auto content-start px-4" id="about">
+  <section className="container mx-auto content-start px-4 page-wrapper" id="about">
     <Name />
     <SiteMenu />
     <div className="content container px-6 py-4">
@@ -25,10 +25,10 @@ export default () => (
         frameworks before joining a CRM company as a full-fledged developer.
       </p>
       <p className="mb-3">
-        I currently live in Reno, NV with my crazy-beautiful wife and kids. My
+        I currently live in Reno, NV with my beautiful wife and kids. My
         current technical interests include machine learning, home automation,
         and security. My hobbies include skiing, hiking, golfing, economics and
-        3d printing.
+        3D printing.
       </p>
       <h3 className="text-xl mb-3">webXL</h3>
       <p className="mb-3">

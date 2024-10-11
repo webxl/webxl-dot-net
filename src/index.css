@@ -6,3 +6,7 @@ body {
     background-color: #889bb9;
 }
 
+#root {
+    width: 100%;
+}
+

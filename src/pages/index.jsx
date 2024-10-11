@@ -16,7 +16,7 @@ const Subtitle = styled.div`
   }
 `;
 const Index = () => (
-  <div className="mt-28 text-center ">
+  <div className="mt-28 text-center page-wrapper">
     <Name isLanding />
     <Subtitle>software engineer & consultant</Subtitle>
     <SiteMenu isLanding />

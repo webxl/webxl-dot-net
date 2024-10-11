@@ -21,7 +21,7 @@ const Wrapper = styled.div`
 export default () => {
   const { highlights, work, education } = resumeData;
   return (
-    <Wrapper className="container mx-auto content-start px-4">
+    <Wrapper className="container mx-auto content-start px-4 page-wrapper">
       <div>
         <Name />
         <SiteMenu />

@@ -12,7 +12,7 @@ const vars = {
 };
 
 export default () => (
-  <section className="container mx-auto content-start px-4" id="about">
+  <section className="container mx-auto content-start page-wrapper px-4" id="about">
     <Name />
     <SiteMenu />
     <div className="content container px-6 py-4">

@@ -12,6 +12,7 @@
     "serve": "vite preview"
   },
   "dependencies": {
+    "@react-spring/web": "^9.7.5",
     "hex-to-rgba": "^2.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
