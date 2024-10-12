@@ -38,10 +38,10 @@ export default () => (
         value, interest rate, rate or return, contributions, withdrawals and
         contributions, withdrawals and retirement time frame.
       </p>
-      <ul className="my-4" style={{ listStyle: "circle inside" }}>
+      <ul className="my-4 ml-6" style={{ listStyle: "disc outside" }}>
         <li className="mb-2">
           Calculates a savings balance over time, factoring in:
-          <ul className="pl-8 my-2" style={{ listStyle: "disc inside" }}>
+          <ul className="pl-8 my-2" style={{ listStyle: "disc outside" }}>
             <li className="mb-2">initial balance</li>
             <li className="mb-2">monthly contributions</li>
             <li className="mb-2">withdrawal amount</li>
@@ -54,7 +54,7 @@ export default () => (
         </li>
         <li className="mb-2">
           Graphs the savings balance over time using an interactive chart
-          <ul className="pl-8 my-2" style={{ listStyle: "disc inside" }}>
+          <ul className="pl-8 my-2" style={{ listStyle: "disc outside" }}>
             <li className="mb-2">
               Highlights the date contributions end and withdrawals begin
             </li>
@@ -71,7 +71,7 @@ export default () => (
         </li>
       </ul>
 
-      <h3 className="text-xl mb-3">
+      <h3 className="text-xl mt-10 mb-3">
         <a href="https://btc-charts-lovat.vercel.app/">BTC Charts</a>
       </h3>
       <p className="mb-4">
@@ -91,7 +91,7 @@ export default () => (
         (BTC) while comparing it to a popular trend line known as the Power Law.
         You can also configure the x and y axes to display in logarithmic scale.
       </p>
-      <ul className="my-4" style={{ listStyle: "circle inside" }}>
+      <ul className="my-4 ml-6" style={{ listStyle: "disc outside" }}>
         <li className="mb-2">
           This project shares some of the components and styles from Inflation Planner, but
           also pushes <a href="https://nivo.rocks/">Nivo charts</a> to its
@@ -111,7 +111,7 @@ export default () => (
         </li>
       </ul>
 
-      <h3 className="text-xl mb-3">
+      <h3 className="text-xl mt-10 mb-3">
         <a href="https://tustinirvineinternalmedicine.com/">
           Tustin Irvine Internal Medicine
         </a>
@@ -128,7 +128,7 @@ export default () => (
           </a>
         </div>
         <div className="flex-auto">
-          <ul className="my-4" style={{ listStyle: "circle inside" }}>
+          <ul className="my-4 ml-4" style={{ listStyle: "disc outside" }}>
             <li className="mb-2">
               Tustin Irvine Internal Medicine is a medical practice that
               provides a wide range of services to patients in the Tustin and

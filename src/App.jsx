@@ -80,6 +80,7 @@ const BackgroundWrapper = styled.div`
   .content {
     background: rgba(255, 255, 255, 0.8);
     border-radius: 4px;
+    padding: 25px 40px;
   }
 
   ul {

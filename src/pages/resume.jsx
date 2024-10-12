@@ -33,7 +33,7 @@ export default () => {
             experience
           </h4>
 
-          <ul className="mb-3" style={{ listStyle: "circle inside" }}>
+          <ul className="mb-3" style={{ listStyle: "disc inside" }}>
             {highlights.map((hl, i) => (
               <li className="leading-normal mb-2" key={i}>
                 {hl}

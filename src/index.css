@@ -6,6 +6,10 @@ body {
     background-color: #889bb9;
 }
 
+ul li {
+   line-height: 1.5;
+}
+
 #root {
     width: 100%;
 }
