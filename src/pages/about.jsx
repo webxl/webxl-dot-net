@@ -25,8 +25,8 @@ export default () => (
         frameworks before joining a CRM company as a full-fledged developer.
       </p>
       <p className="mb-3">
-        I currently live in Reno, NV with my beautiful wife and kids. My
-        current technical interests include machine learning, home automation,
+        I currently live in often sunny, sometimes snowy, Reno, NV. My
+        current technical interests include AI & agentic computing, home automation,
         and security. My hobbies include skiing, hiking, golfing, economics and
         3D printing.
       </p>
