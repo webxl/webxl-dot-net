@@ -19,7 +19,7 @@ export default ({ isLanding }) => {
         className={btnClass}
         hidden={pathname === "/resume"}
       >
-        Résumé
+        Resume
       </StyledLink>
       <StyledLink
         to="/about"

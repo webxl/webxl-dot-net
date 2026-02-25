@@ -1,0 +1,23 @@
+# Matt Motherway
+
+> Senior Full-Stack Engineer with 15+ years' experience building scalable, secure, high-performance applications. Proficient in TypeScript, React, Node.js, and PostgreSQL.
+
+Matt Motherway is a software engineer and consultant based in Reno, NV. He specializes in full-stack web development with a focus on financial software, ERP systems, and developer tooling.
+
+## Pages
+
+- [Home](https://webxl.net/): Landing page
+- [Résumé](https://webxl.net/resume): Full work history, skills, and education
+- [Portfolio](https://webxl.net/portfolio): Selected projects and client work
+- [About](https://webxl.net/about): Background and contact information
+
+## Data
+
+- [Resume JSON](https://webxl.net/resume.json): Structured resume data (JSON)
+
+## Contact
+
+- Email: matt@motherway.dev
+- GitHub: https://github.com/webxl
+- LinkedIn: https://linkedin.com/in/webxl
+- Personal site: https://motherway.dev
