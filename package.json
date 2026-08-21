@@ -1,24 +1,21 @@
 {
   "name": "webxl-web",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "The Matt Motherway Project",
   "author": "Matt Motherway",
   "private": true,
   "type": "module",
   "url": "https://github.com/webxl/webxl-dot-net",
   "scripts": {
-    "dev": "nodemon --watch ../../dist/*.js -x 'DEBUG=vite-plugin-pages:* vite'",
-    "build": "DEBUG=vite-plugin-pages vite build",
+    "dev": "vite",
+    "build": "vite build",
     "serve": "vite preview"
   },
   "dependencies": {
-    "@react-spring/web": "^9.7.5",
-    "hex-to-rgba": "^2.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router": "^6.8.2",
-    "react-router-dom": "^6.8.2",
-    "styled-components": "^5.3.6"
+    "react-router-dom": "^6.8.2"
   },
   "devDependencies": {
     "@types/react": "^18.0.27",

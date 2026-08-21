@@ -1,19 +1,19 @@
 # Matt Motherway
 
-> Senior Full-Stack Engineer with 15+ years' experience building scalable, secure, high-performance applications. Proficient in TypeScript, React, Node.js, and PostgreSQL.
+> Senior full-stack engineer and digital transformation advisor. TypeScript, React, and Node product engineering, plus advisory work. Based in Reno, NV.
 
-Matt Motherway is a software engineer and consultant based in Reno, NV. He specializes in full-stack web development with a focus on financial software, ERP systems, and developer tooling.
+Matt Motherway is available for consulting: product engineering (TypeScript / React / Node) and digital-transformation advisory. Currently Digital Transformation Advisor at RedTap.
 
 ## Pages
 
-- [Home](https://webxl.net/): Landing page
-- [Résumé](https://webxl.net/resume): Full work history, skills, and education
-- [Portfolio](https://webxl.net/portfolio): Selected projects and client work
-- [About](https://webxl.net/about): Background and contact information
+- [Home](https://motherway.dev/): Consulting pitch, selected outcomes, and contact
+- [Work](https://motherway.dev/work): Client and product work (Silo, Zephyr, client sites) plus personal projects
+- [Résumé](https://motherway.dev/resume): Full work history, skills, and education
+- [About](https://motherway.dev/about): Background and contact
 
 ## Data
 
-- [Resume JSON](https://webxl.net/resume.json): Structured resume data (JSON)
+- [Resume JSON](https://motherway.dev/resume.json): Structured resume data (JSON)
 
 ## Contact
 

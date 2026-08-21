@@ -1,70 +1,103 @@
-import pkg from "../../package.json";
-import Name from "../components/name.jsx";
-import SiteMenu from "../components/siteMenu";
+import { SITE } from "../site";
+import { usePageTitle } from "../usePageTitle";
 
-const vars = {
-  my_public_repo: pkg.url,
-  profile_links: [
-    { url: "https://github.com/webxl", name: "Github" },
-    { url: "https://linkedin.com/in/webxl", name: "LinkedIn" },
-    { url: "https://twitter.com/mattmotherway", name: "Twitter" },
-  ],
-};
+const notes = [
+  { k: "Base", v: `${SITE.location} / High Sierra` },
+  { k: "School", v: "Stanford · BA Economics, CS minor" },
+  { k: "Now", v: "RedTap · Digital Transformation Advisor" },
+  { k: "Off-trail", v: "Ski, hike, golf, 3D print" },
+];
 
-export default () => (
-  <section className="container mx-auto content-start px-4 page-wrapper" id="about">
-    <Name />
-    <SiteMenu />
-    <div className="content container px-6 py-4">
-      <h2 className="text-2xl mb-3">About Me</h2>
-      <p className="mb-3">
-        I'm a full-stack software engineer specializing in web and mobile apps,
-        but I also have a vast DevOps background that stretches back to the
-        dotcom days. After leaving Silicon Valley in the early 2000s, I spent a
-        few years in Los Angeles learning the LAMP stack and JavaScript
-        frameworks before joining a CRM company as a full-fledged developer.
-      </p>
-      <p className="mb-3">
-        I currently live in often sunny, sometimes snowy, Reno, NV. My
-        current technical interests include AI & agentic computing, home automation,
-        and security. My hobbies include skiing, hiking, golfing, economics and
-        3D printing.
-      </p>
-      <h3 className="text-xl mb-3">webXL</h3>
-      <p className="mb-3">
-        I ran a consulting company called webXL from 2008 to 2010 to help
-        companies with their CRM implementations and online presence. I've since
-        moved on to other things, but I still host and maintain a few sites for
-        old clients and freelance for local businesses.
-      </p>
+export default function About() {
+  usePageTitle(`About – ${SITE.name}`);
 
-      <h4 className="text-xl mb-3">Profiles</h4>
-      <ul className="mb-4" style={{ listStyle: "circle inside" }}>
-        {vars.profile_links.map((link, name) => (
-          <li key={name} className="mb-2">
-            <a href={link.url} target="_blank">
-              {link.name}
-            </a>
-          </li>
-        ))}
-      </ul>
-      <h3 className="text-2xl my-3">Site</h3>
-      <p className="mb-3">
-        This site was generated with{" "}
-        <a href="https://vitejs.dev/guide/static-deploy.html#deploying-a-static-site">
-          ViteJS
-        </a>{" "}
-        and React. The source is available at{" "}
-        <a href={vars.my_public_repo}>{vars.my_public_repo}</a>. There you can
-        witness the pure awesomeness that is Vite, React, styled-components and{" "}
-        <a href="https://tailwindcss.com/">Tailwind CSS</a>. The backgrounds
-        were generated with <a href="https://app.haikei.app/">Haikei</a>. The
-        icon was generated with{" "}
-        <a href="https://danmarshall.github.io/google-font-to-svg-path/">
-          Google Font to Svg Path
-        </a>{" "}
-        and <a href="https://editor.method.ac/">Method Draw</a>.
-      </p>
+  return (
+    <div className="px-4 pb-8 pt-10 sm:px-6">
+      <h1 className="overflow-hidden font-poster text-[clamp(4.5rem,18vw,11rem)] uppercase leading-[0.76] tracking-[-0.045em] text-bone">
+        About
+      </h1>
+
+      <div className="mt-10 grid gap-12 lg:grid-cols-[minmax(0,16rem)_minmax(0,36rem)]">
+        <dl className="space-y-4 font-mono text-[11px] uppercase tracking-[0.14em] text-bone-dim">
+          {notes.map((note) => (
+            <div key={note.k}>
+              <dt className="text-blaze">{note.k}</dt>
+              <dd className="mt-1 normal-case tracking-normal text-bone">{note.v}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <div className="max-w-xl space-y-5 leading-relaxed text-bone-dim">
+          <p>
+            Senior full-stack engineer and digital transformation advisor in
+            often-sunny, sometimes-snowy Reno. Economics and security still
+            occupy spare brain cycles.
+          </p>
+          <p>
+            These days I’m especially interested in AI and agentic computing,
+            along with home automation.
+          </p>
+          <p>
+            Most of the career has been shipping product software — a long run on
+            Informa’s Zephyr platform, then senior engineering at Silo, and now
+            advisory work at RedTap. I take on product engineering and advisory
+            engagements directly. The orange stamp is the door.
+          </p>
+        </div>
+      </div>
+
+      <section className="mt-20 max-w-xl" aria-labelledby="site-heading">
+        <h2
+          id="site-heading"
+          className="font-poster text-4xl uppercase leading-none tracking-tight text-bone"
+        >
+          This site
+        </h2>
+        <p className="mt-4 leading-relaxed text-bone-dim">
+          Vite, React, Tailwind. Source on{" "}
+          <a href={SITE.source} className="text-link">
+            GitHub
+          </a>
+          . Mark from{" "}
+          <a
+            href="https://danmarshall.github.io/google-font-to-svg-path/"
+            className="text-link"
+          >
+            Google Font to Svg Path
+          </a>{" "}
+          and{" "}
+          <a href="https://editor.method.ac/" className="text-link">
+            Method Draw
+          </a>
+          .
+        </p>
+        <p className="mt-6 flex flex-wrap gap-x-5 font-mono text-[11px] uppercase tracking-[0.14em]">
+          <a
+            href={SITE.linkedin}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-bone-dim no-underline hover:text-bone"
+          >
+            LinkedIn
+          </a>
+          <a
+            href={SITE.github}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-bone-dim no-underline hover:text-bone"
+          >
+            GitHub
+          </a>
+          <a
+            href={SITE.twitter}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-bone-dim no-underline hover:text-bone"
+          >
+            Twitter
+          </a>
+        </p>
+      </section>
     </div>
-  </section>
-);
+  );
+}

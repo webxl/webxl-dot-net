@@ -1,117 +1,20 @@
-import styled from "styled-components";
-import bgImage from "./assets/blurry-gradient-haikei.svg";
-import flareBgImage from "./assets/layered-waves-haikei.svg";
-
 import { Suspense } from "react";
 import { useRoutes } from "react-router-dom";
-import { animated,  useSpring } from "@react-spring/web";
-import { easings } from '@react-spring/web'
-
 import routes from "~react-pages";
-import { colors } from "./style-vars.js";
-import Flare from "./components/flare.jsx";
+import Layout from "./components/Layout";
 
-const App = () => {
-  const rockingX = useSpring({
-    from: { x: -50, scale: 1.2, opacity: 0.3 },
-    to: { x: 50, scale: 1.2, opacity: 0.7 },
-    loop: { reverse: true },
-    config: {
-      mass: 200,
-      easing: easings.easeInElastic,
-    },
-
-  });
+export default function App() {
+  const element = useRoutes(routes);
 
   return (
-    <Suspense>
-      <BackgroundWrapper>
-      <div className="content-container">
-        <animated.div
-          className="wave-wrapper"
-          style={rockingX}
-        />
-        {useRoutes(routes)}</div>
-        <Flare />
-      </BackgroundWrapper>
+    <Suspense
+      fallback={
+        <div className="px-6 py-16 font-mono text-sm text-bone-dim" role="status">
+          Loading…
+        </div>
+      }
+    >
+      <Layout>{element}</Layout>
     </Suspense>
   );
-};
-
-const BackgroundWrapper = styled.div`
-
-  font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI",
-    Roboto, "Helvetica Neue", Arial, sans-serif;
-
-  .content-container {
-    background-image: url(${bgImage});
-    background-size: cover;
-    background-attachment: fixed;
-    background-repeat: repeat-x;
-
-    min-height: 100vh;
-    overflow: hidden;
-    position: relative;
-
-    padding: 20px 20px 150px;
-  }
-
-  .footer--pin {
-    position: relative;
-    z-index: 20;
-    left: 0;
-    bottom: 20px;
-    background-size: cover;
-    background-attachment: fixed;
-    margin-top: -80px;
-
-    @media (max-width: 640px) {
-      margin-top: -160px;
-    }
-  }
-
-  .page-wrapper {
-    height: 100%;
-    z-index: 20;
-    position: relative;
-    margin-bottom: 100px;
-  }
-
-  .content {
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 4px;
-    padding: 25px 40px;
-  }
-
-  ul {
-    line-height: 1;
-  }
-
-  li {
-    margin-left: 2px;
-  }
-
-  a,
-  a:visited {
-    font-weight: 400;
-    color: ${colors.primaryColor};
-  }
-
-  .wave-wrapper {
-    background-image: url(${flareBgImage});
-    background-size: cover;
-    background-attachment: fixed;
-    min-height: 100vh;
-    position: absolute;
-    top: -500px;
-    left: -100px;
-    right: -100px;
-    bottom: 0;
-    z-index: 10;
-    background-repeat: repeat-x;
-    transform: scaleX(1.2);
-    opacity: 0.5;
-  }
-`;
-
-export default App;
+}
