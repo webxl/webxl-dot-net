@@ -4,28 +4,30 @@ import { DEFAULT_TITLE, usePageTitle } from "../usePageTitle";
 import resume from "./resume.json";
 
 const silo = resume.work.find((job) => job.company === "Silo Technologies");
-const informa = resume.work.find((job) =>
-  job.company.includes("Informa")
-);
+const informa = resume.work.find((job) => job.company.includes("Informa"));
+const redtap = resume.work.find((job) => job.company === "RedTap");
 
 const proofs = [
   {
+    n: "01",
     href: "/work#silo",
-    kicker: silo.position,
-    title: "Silo",
-    body: "Payments architecture contributing to 8-figure ARR, on a React, TypeScript, Go, and GraphQL ERP for the perishable-goods supply chain.",
+    name: "Silo",
+    meta: `${silo.position} · 2021–25`,
+    line: "Payments architecture contributing to 8-figure ARR. React / TypeScript / Go / GraphQL ERP for the perishable-goods supply chain.",
   },
   {
+    n: "02",
     href: "/work#zephyr",
-    kicker: informa.position,
-    title: "Informa · Zephyr",
-    body: "Led engineering for Zephyr OnDEMAND, a financial reporting and analytics product that generated $3M+ in annual revenue.",
+    name: "Zephyr / Informa",
+    meta: `${informa.position} · 2010–21`,
+    line: "Led engineering for Zephyr OnDEMAND, a financial reporting product generating $3M+ in annual revenue.",
   },
   {
+    n: "03",
     href: "/resume",
-    kicker: resume.education[0].institution,
-    title: "15+ years shipping",
-    body: "Full-stack product work across SaaS, payments, and financial software. Economics degree, Computer Science minor.",
+    name: "15+ years",
+    meta: resume.education[0].institution,
+    line: "Full-stack product work across SaaS, payments, and financial software. BA Economics, Computer Science minor.",
   },
 ];
 
@@ -34,116 +36,96 @@ export default function Home() {
 
   return (
     <div>
-      <section className="mx-auto max-w-page px-6 pb-20 pt-14 sm:pb-28 sm:pt-20">
-        <div className="mb-6 h-[3px] w-12 bg-accent" aria-hidden="true" />
-        <p className="kicker">
-          Available for consulting · {SITE.location}
-        </p>
-        <h1 className="mt-5 max-w-3xl font-serif text-4xl font-medium leading-[1.12] tracking-tight text-ink sm:text-5xl lg:text-[3.5rem]">
-          Product engineering and digital transformation for teams that need to ship.
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink-muted sm:text-xl">
-          TypeScript, React, and Node for the product. Advisory for the platforms,
-          workflows, and integrations that have to last. Currently Digital
-          Transformation Advisor at RedTap.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <a href={SITE.mailto} className="btn-primary">
-            Email {SITE.email}
-          </a>
-          <a
-            href={SITE.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[0.95rem] font-medium text-ink no-underline hover:text-accent"
-          >
-            LinkedIn
-          </a>
-          <a
-            href={SITE.github}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[0.95rem] font-medium text-ink no-underline hover:text-accent"
-          >
-            GitHub
-          </a>
+      <section className="relative overflow-x-hidden pt-8 sm:pt-10">
+        <div className="flex items-stretch gap-3 px-4 sm:px-6">
+          <span className="mt-2 w-1.5 shrink-0 bg-blaze sm:mt-3 sm:w-2" aria-hidden="true" />
+          <h1 className="name-lock min-w-0 font-poster text-[clamp(5.25rem,26vw,17rem)] uppercase leading-[0.72] tracking-[-0.055em] text-bone">
+            Matt
+            <br />
+            <span className="block whitespace-nowrap">Motherway</span>
+          </h1>
+        </div>
+
+        <div className="mt-8 grid gap-10 px-4 sm:px-6 lg:grid-cols-[minmax(0,13rem)_minmax(0,34rem)_1fr] lg:items-start">
+          <dl className="space-y-3 font-mono text-[11px] uppercase tracking-[0.14em] text-bone-dim">
+            <div>
+              <dt className="text-blaze">Status</dt>
+              <dd className="mt-1 text-bone">Open</dd>
+            </div>
+            <div>
+              <dt>Field</dt>
+              <dd className="mt-1">Product + advisory</dd>
+            </div>
+            <div>
+              <dt>Base</dt>
+              <dd className="mt-1">
+                {SITE.location}
+                <br />
+                High Sierra
+              </dd>
+            </div>
+          </dl>
+
+          <p className="max-w-md text-[1.05rem] leading-relaxed text-bone">
+            TypeScript, React, and Node for the product. Advisory for the
+            platforms, workflows, and integrations that have to last. Currently{" "}
+            {redtap.position} at {redtap.company}.
+          </p>
         </div>
       </section>
 
-      <section className="border-t border-rule" aria-labelledby="proof-heading">
-        <div className="mx-auto max-w-page px-6 py-16 sm:py-20">
-          <h2 id="proof-heading" className="kicker">
-            Selected outcomes
-          </h2>
-          <div className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
-            {proofs.map((proof) => (
-              <Link
-                key={proof.title}
-                to={proof.href}
-                className="group block no-underline"
-              >
-                <p className="text-sm text-ink-muted">{proof.kicker}</p>
-                <h3 className="mt-2 font-serif text-2xl font-medium text-ink group-hover:text-accent">
-                  {proof.title}
-                </h3>
-                <p className="mt-3 leading-relaxed text-ink-muted">{proof.body}</p>
+      <section className="mt-20 px-4 sm:mt-28 sm:px-6" aria-labelledby="proof-heading">
+        <h2 id="proof-heading" className="font-poster text-[clamp(3.5rem,14vw,8rem)] uppercase leading-[0.78] tracking-[-0.04em] text-bone">
+          Proof
+        </h2>
+        <ol className="mt-8">
+          {proofs.map((proof) => (
+            <li key={proof.n} className="border-t border-line py-6 last:border-b">
+              <Link to={proof.href} className="group grid gap-3 no-underline sm:grid-cols-[3.5rem_1fr]">
+                <span className="font-mono text-[11px] text-blaze">{proof.n}</span>
+                <div>
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+                    <span className="font-poster text-3xl uppercase leading-none tracking-tight text-bone group-hover:text-blaze sm:text-4xl">
+                      {proof.name}
+                    </span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-bone-dim">
+                      {proof.meta}
+                    </span>
+                  </div>
+                  <p className="mt-3 max-w-2xl text-[0.95rem] leading-relaxed text-bone-dim">
+                    {proof.line}
+                  </p>
+                </div>
               </Link>
-            ))}
-          </div>
-        </div>
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <section className="border-t border-rule" aria-labelledby="offer-heading">
-        <div className="mx-auto grid max-w-page gap-12 px-6 py-16 sm:py-20 lg:grid-cols-2">
+      <section className="mt-20 px-4 sm:mt-28 sm:px-6" aria-labelledby="offer-heading">
+        <h2 id="offer-heading" className="font-poster text-[clamp(3.5rem,14vw,8rem)] uppercase leading-[0.78] tracking-[-0.04em] text-bone">
+          Take
+        </h2>
+        <div className="mt-8 max-w-xl space-y-8 border-t border-line pt-6">
           <div>
-            <h2 id="offer-heading" className="kicker">
-              How I work
-            </h2>
-            <p className="mt-4 font-serif text-3xl font-medium leading-snug text-ink">
-              Senior full-stack delivery, plus the advisory around it.
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-blaze">
+              Eng
+            </p>
+            <p className="mt-2 leading-relaxed text-bone-dim">
+              TypeScript, React, and Node — APIs, payments, design systems, and
+              the unglamorous work that keeps a product reliable. Architecture
+              through implementation, not slides.
             </p>
           </div>
-          <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-            <div>
-              <h3 className="font-serif text-xl font-medium text-ink">
-                Product engineering
-              </h3>
-              <p className="mt-3 leading-relaxed text-ink-muted">
-                TypeScript, React, and Node — APIs, payments, design systems, and
-                the unglamorous work that keeps a product reliable. Architecture
-                through implementation, not slides.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-serif text-xl font-medium text-ink">
-                Digital transformation advisory
-              </h3>
-              <p className="mt-3 leading-relaxed text-ink-muted">
-                Currently at RedTap: Node and React services, LLM-enabled document
-                and scheduling workflows, and a Supabase-backed CRM for real estate
-                development and hiring.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-rule" aria-labelledby="close-heading">
-        <div className="mx-auto max-w-page px-6 py-16 sm:py-20">
-          <h2 id="close-heading" className="font-serif text-3xl font-medium text-ink sm:text-4xl">
-            If you need someone who can still write the code — and advise on the
-            system around it — email me.
-          </h2>
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-            <a href={SITE.mailto} className="btn-primary">
-              Email {SITE.email}
-            </a>
-            <Link
-              to="/work"
-              className="text-[0.95rem] font-medium text-ink no-underline hover:text-accent"
-            >
-              See selected work
-            </Link>
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-blaze">
+              Adv
+            </p>
+            <p className="mt-2 leading-relaxed text-bone-dim">
+              Currently at RedTap: Node and React services, LLM-enabled document
+              and scheduling workflows, and a Supabase-backed CRM for real estate
+              development and hiring.
+            </p>
           </div>
         </div>
       </section>

@@ -9,7 +9,7 @@ export default function App() {
   return (
     <Suspense
       fallback={
-        <div className="px-6 py-16 text-ink-muted" role="status">
+        <div className="px-6 py-16 font-mono text-sm text-bone-dim" role="status">
           Loading…
         </div>
       }

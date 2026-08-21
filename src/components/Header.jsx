@@ -1,5 +1,4 @@
 import { Link, NavLink } from "react-router-dom";
-import { SITE } from "../site";
 
 const links = [
   { to: "/work", label: "Work" },
@@ -9,38 +8,29 @@ const links = [
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-30 border-b border-rule bg-paper/95 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-page flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-        <Link
-          to="/"
-          className="font-serif text-xl tracking-tight text-ink no-underline sm:text-[1.35rem]"
-        >
-          {SITE.name}
-        </Link>
-        <nav className="flex flex-wrap items-center gap-x-6 gap-y-2" aria-label="Primary">
-          {links.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                `text-[0.95rem] no-underline transition-colors ${
-                  isActive
-                    ? "font-semibold text-ink underline decoration-accent decoration-2 underline-offset-[10px]"
-                    : "font-medium text-ink-muted hover:text-ink"
-                }`
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-          <a
-            href={SITE.mailto}
-            className="text-[0.95rem] font-semibold text-accent no-underline hover:text-accent-dark"
+    <header className="relative z-20 flex items-end justify-between gap-6 px-4 pt-5 sm:px-6">
+      <Link
+        to="/"
+        className="font-poster text-2xl uppercase leading-none tracking-tight text-bone no-underline"
+        aria-label="Matt Motherway, home"
+      >
+        MM
+      </Link>
+      <nav className="flex flex-wrap justify-end gap-x-5 gap-y-2" aria-label="Primary">
+        {links.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            className={({ isActive }) =>
+              `font-mono text-[11px] uppercase tracking-[0.16em] no-underline ${
+                isActive ? "text-blaze" : "text-bone-dim hover:text-bone"
+              }`
+            }
           >
-            Email
-          </a>
-        </nav>
-      </div>
+            {link.label}
+          </NavLink>
+        ))}
+      </nav>
     </header>
   );
 }

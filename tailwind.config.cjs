@@ -4,25 +4,18 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        paper: "#f4f1eb",
-        cream: "#fffdf9",
-        ink: {
-          DEFAULT: "#1c2430",
-          muted: "#5a6270",
-          faint: "#8b8490",
+        char: "#131210",
+        bone: {
+          DEFAULT: "#e9e2d2",
+          dim: "#9a9284",
         },
-        accent: {
-          DEFAULT: "#c45c3a",
-          dark: "#a84a2e",
-        },
-        rule: "#d6d0c6",
+        blaze: "#ff4e00",
+        line: "#2a2722",
       },
       fontFamily: {
-        serif: ["Newsreader", "Georgia", "serif"],
-        sans: ['"Source Sans 3"', "system-ui", "sans-serif"],
-      },
-      maxWidth: {
-        page: "72rem",
+        poster: ['"Big Shoulders Display"', "Impact", "Arial Narrow", "sans-serif"],
+        mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+        sans: ['"IBM Plex Sans"', "Helvetica Neue", "Arial", "sans-serif"],
       },
     },
   },
