@@ -34,7 +34,7 @@ export default function Work() {
       </div>
 
       <div className="mt-16 space-y-20">
-        <article id="silo" className="scroll-mt-24 border-t border-rule pt-12">
+        <article id="silo" className="scroll-mt-32 border-t border-rule pt-12">
           <p className="kicker">
             Product · {silo.dateRange}
           </p>
@@ -75,7 +75,7 @@ export default function Work() {
           </p>
         </article>
 
-        <article id="zephyr" className="scroll-mt-24 border-t border-rule pt-12">
+        <article id="zephyr" className="scroll-mt-32 border-t border-rule pt-12">
           <p className="kicker">
             Product · {informa.dateRange}
           </p>
@@ -118,7 +118,7 @@ export default function Work() {
           </p>
         </article>
 
-        <article id="tustin" className="scroll-mt-24 border-t border-rule pt-12">
+        <article id="tustin" className="scroll-mt-32 border-t border-rule pt-12">
           <p className="kicker">Client site</p>
           <h2 className="mt-3 font-serif text-3xl font-medium text-ink">
             <a

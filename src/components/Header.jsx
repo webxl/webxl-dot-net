@@ -25,7 +25,7 @@ export default function Header() {
               className={({ isActive }) =>
                 `text-[0.95rem] no-underline transition-colors ${
                   isActive
-                    ? "font-semibold text-ink"
+                    ? "font-semibold text-ink underline decoration-accent decoration-2 underline-offset-[10px]"
                     : "font-medium text-ink-muted hover:text-ink"
                 }`
               }
