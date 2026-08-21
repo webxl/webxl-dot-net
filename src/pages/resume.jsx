@@ -1,34 +1,6 @@
-import resumeData from "./resume.json";
-import Name from "../components/name.jsx";
-import styled from "styled-components";
-import SiteMenu from "../components/siteMenu";
-
-const Wrapper = styled.div`
-  li {
-    padding-left: 16px;
-    margin-top: 0.6rem;
-  }
-  .position-header {
-    margin-top: 20px;
-    font-weight: bold;
-  }
-  .position-title,
-  .summary {
-    margin-bottom: 10px;
-  }
-  .skills-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 0.5rem 2rem;
-  }
-  .skill-label {
-    font-weight: 600;
-    color: #555;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-`;
+import resume from "./resume.json";
+import { SITE } from "../site";
+import { usePageTitle } from "../usePageTitle";
 
 const skillLabels = {
   databases: "Databases",
@@ -37,79 +9,107 @@ const skillLabels = {
   tools: "Collaboration & Tools",
 };
 
-export default () => {
-  const { highlights, summary, work, education, skills } = resumeData;
+export default function Resume() {
+  usePageTitle(`Resume – ${SITE.name}`);
+  const { summary, work, education, skills } = resume;
+
   return (
-    <Wrapper className="container mx-auto content-start px-4 page-wrapper">
-      <div>
-        <Name />
-        <SiteMenu />
-        <div className="content mx-auto content-start px-6 py-4">
-          <h2 className="text-2xl my-3">Resume</h2>
-
-          <h4 className="text-xl mb-3">
-            Senior Full-Stack Engineer with 15+ years SaaS experience
-          </h4>
-
-          <p className="mb-3 leading-relaxed">{summary}</p>
-
-          <h3 className="text-2xl my-6">Experience</h3>
-          {work.map((pos, i) => (
-            <div key={i} className="mb-5">
-              <div className="row position-header flex items-stretch">
-                <div className="flex-1 flex-nowrap">
-                  {pos.company}, {pos.location}
-                </div>
-                <div className="flex">{pos.dateRange}</div>
-              </div>
-              <div className="position-title">{pos.position}</div>
-              {pos.highlights && (
-                <ul style={{ listStyle: "disc inside" }}>
-                  {pos.highlights.map((hl, j) => (
-                    <li className="leading-normal mb-1" key={j}>
-                      {hl}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-
-          <h3 className="text-2xl my-6">Education</h3>
-          {education.map((pos, i) => (
-            <div key={i} className="mb-4">
-              <div className="row position-header flex items-stretch">
-                <div className="flex-1 w-50">{pos.institution}</div>
-                <div className="flex">{pos.dateRange}</div>
-              </div>
-              <div className="summary">{pos.studyType}</div>
-              {pos.courses && pos.courses.length > 0 && (
-                <ul style={{ listStyle: "disc inside" }}>
-                  {pos.courses.map((c, j) => (
-                    <li className="leading-normal" key={j}>
-                      {c}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-
-          {skills && (
-            <>
-              <h3 className="text-2xl my-6">Skills</h3>
-              <div className="skills-grid mb-4">
-                {Object.entries(skills).map(([key, values]) => (
-                  <div key={key}>
-                    <div className="skill-label">{skillLabels[key] || key}</div>
-                    <div className="leading-relaxed">{values.join(", ")}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
+    <div className="mx-auto max-w-page px-6 pb-24 pt-12 sm:pt-16">
+      <div className="max-w-3xl">
+        <div className="mb-6 h-[3px] w-12 bg-accent" aria-hidden="true" />
+        <p className="kicker">Resume</p>
+        <h1 className="mt-4 font-serif text-4xl font-medium tracking-tight text-ink sm:text-5xl">
+          Senior full-stack engineer, 15+ years shipping SaaS.
+        </h1>
+        <p className="mt-6 text-lg leading-relaxed text-ink-muted">{summary}</p>
+        <p className="mt-6">
+          <a href={SITE.mailto} className="btn-primary">
+            Email {SITE.email}
+          </a>
+        </p>
       </div>
-    </Wrapper>
+
+      <section className="mt-16 border-t border-rule pt-12" aria-labelledby="experience-heading">
+        <h2 id="experience-heading" className="font-serif text-3xl font-medium text-ink">
+          Experience
+        </h2>
+        <div className="mt-10 space-y-12">
+          {work.map((job) => (
+            <article key={`${job.company}-${job.dateRange}`}>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h3 className="font-serif text-2xl font-medium text-ink">
+                  {job.website ? (
+                    <a
+                      href={job.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-ink no-underline hover:text-accent"
+                    >
+                      {job.company}
+                    </a>
+                  ) : (
+                    job.company
+                  )}
+                </h3>
+                <p className="text-sm text-ink-muted sm:text-right">{job.dateRange}</p>
+              </div>
+              <p className="mt-1 text-ink-muted">
+                {job.position}
+                {job.location ? ` · ${job.location}` : ""}
+              </p>
+              {job.highlights && (
+                <ul className="mt-4 list-disc space-y-2 pl-5 leading-relaxed text-ink-muted">
+                  {job.highlights.map((highlight) => (
+                    <li key={highlight}>{highlight}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-16 border-t border-rule pt-12" aria-labelledby="education-heading">
+        <h2 id="education-heading" className="font-serif text-3xl font-medium text-ink">
+          Education
+        </h2>
+        <div className="mt-8 space-y-6">
+          {education.map((school) => (
+            <article key={school.institution}>
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                <h3 className="font-serif text-2xl font-medium text-ink">
+                  {school.institution}
+                </h3>
+                <p className="text-sm text-ink-muted">{school.dateRange}</p>
+              </div>
+              <p className="mt-1 text-ink-muted">{school.studyType}</p>
+              {school.courses && school.courses.length > 0 && (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-ink-muted">
+                  {school.courses.map((course) => (
+                    <li key={course}>{course}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {skills && (
+        <section className="mt-16 border-t border-rule pt-12" aria-labelledby="skills-heading">
+          <h2 id="skills-heading" className="font-serif text-3xl font-medium text-ink">
+            Skills
+          </h2>
+          <div className="mt-8 grid gap-8 sm:grid-cols-2">
+            {Object.entries(skills).map(([key, values]) => (
+              <div key={key}>
+                <h3 className="kicker">{skillLabels[key] || key}</h3>
+                <p className="mt-2 leading-relaxed text-ink-muted">{values.join(", ")}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
   );
-};
+}

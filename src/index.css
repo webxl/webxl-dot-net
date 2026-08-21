@@ -2,15 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-    background-color: #889bb9;
+@layer base {
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply bg-paper font-sans text-ink antialiased;
+  }
+
+  ::selection {
+    background: #c45c3a;
+    color: #fff;
+  }
+
+  :focus-visible {
+    @apply outline outline-2 outline-offset-2 outline-accent;
+  }
 }
 
-ul li {
-   line-height: 1.5;
-}
+@layer components {
+  .kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted;
+  }
 
-#root {
-    width: 100%;
-}
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-sm bg-accent px-5 py-3 text-[0.95rem] font-semibold text-white no-underline transition-colors hover:bg-accent-dark;
+  }
 
+  .text-link {
+    @apply font-medium text-ink underline decoration-rule underline-offset-[3px] transition-colors hover:text-accent hover:decoration-accent;
+  }
+}
