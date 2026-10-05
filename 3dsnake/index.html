@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>First-Person Snake</title>
+<style>
+  :root {
+    --accent: #4dff88;
+    --accent-2: #ffd166;
+    --danger: #ff5470;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: #05060a;
+    color: #e8f0ff;
+    font-family: "SF Mono", "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    cursor: crosshair;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; }
+
+  /* ---------- HUD ---------- */
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 18px 22px; pointer-events: none; z-index: 5;
+    text-shadow: 0 2px 10px rgba(0,0,0,.6);
+    user-select: none;
+  }
+  .hgroup { display: flex; gap: 22px; align-items: flex-start; }
+  .hgroup.right { flex-direction: column; align-items: flex-end; gap: 10px; }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat .label { font-size: 11px; letter-spacing: 2px; opacity: .55; text-transform: uppercase; }
+  .stat .value { font-size: 26px; font-weight: 700; line-height: 1; }
+  #score .value { color: var(--accent); }
+  #len .value { color: #7fd4ff; }
+  #spd .value { color: var(--accent-2); }
+  .stat.right { align-items: flex-end; }
+  #rivals { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12px; }
+  #rivals .rlabel { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; opacity: .55; }
+  #rivals .rrow { display: flex; gap: 7px; align-items: center; }
+  #rivals .rrow.dead { opacity: .45; }
+  #rivals .dot { width: 7px; height: 7px; border-radius: 50%; }
+  #rivals .rname { width: 54px; text-align: left; letter-spacing: 1px; opacity: .85; }
+  #rivals .rlen { width: 28px; text-align: right; font-weight: 700; }
+
+  /* crosshair */
+  #crosshair {
+    position: fixed; top: 50%; left: 50%; width: 4px; height: 4px;
+    transform: translate(-50%, -50%);
+    background: rgba(255,255,255,.85); border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255,255,255,.6);
+    pointer-events: none; z-index: 6;
+  }
+
+  /* ---------- Overlays ---------- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; text-align: center;
+    background: radial-gradient(ellipse at center, rgba(6,10,20,.72), rgba(3,5,10,.94));
+    backdrop-filter: blur(3px);
+    padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .title {
+    font-size: clamp(40px, 8vw, 84px); font-weight: 800; letter-spacing: 4px;
+    background: linear-gradient(90deg, var(--accent), #7fd4ff, var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 24px rgba(77,255,136,.25));
+  }
+  .subtitle { font-size: 15px; opacity: .8; max-width: 560px; line-height: 1.6; }
+  .keys {
+    display: flex; flex-wrap: wrap; gap: 10px 22px; justify-content: center;
+    margin-top: 6px; font-size: 13px; opacity: .85;
+  }
+  .keys span { display: inline-flex; align-items: center; gap: 8px; }
+  kbd {
+    background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2);
+    border-bottom-width: 2px; border-radius: 6px; padding: 3px 8px; font-size: 12px;
+    font-family: inherit;
+  }
+  .cta {
+    margin-top: 10px; font-size: 18px; font-weight: 700; letter-spacing: 1px;
+    padding: 14px 34px; border-radius: 12px; color: #05060a;
+    background: linear-gradient(90deg, var(--accent), #7fd4ff);
+    box-shadow: 0 8px 30px rgba(77,255,136,.35);
+    animation: pulse 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+  .big { font-size: clamp(34px, 6vw, 64px); font-weight: 800; }
+  .final { font-size: 22px; opacity: .9; }
+  .final b { color: var(--accent); font-size: 30px; }
+  #finalRivals { font-size: 14px !important; opacity: .7 !important; letter-spacing: 1px; }
+  .newbest { color: var(--accent-2); font-weight: 700; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div class="hgroup">
+    <div class="stat" id="score"><span class="label">Score</span><span class="value" id="scoreVal">0</span></div>
+    <div class="stat" id="len"><span class="label">Length</span><span class="value" id="lenVal">0</span></div>
+  </div>
+  <div class="hgroup right">
+    <div class="stat right" id="spd"><span class="label">Speed</span><span class="value" id="spdVal">0</span></div>
+    <div id="rivals"><span class="rlabel">Rivals</span></div>
+  </div>
+</div>
+<div id="crosshair"></div>
+
+<div id="startScreen" class="overlay">
+  <div class="title">SNAKE·3D</div>
+  <div class="subtitle">You are the snake. Fly through a 3D arena, chomp glowing orbs, and grow — but three rival snakes (VIPER, COBRA, MAMBA) hunt the same orbs. Don't touch the walls, your own body, or a rival's body. If a rival's head clips your tail, they die instead.</div>
+  <div class="keys">
+    <span><kbd>Mouse</kbd> steer (yaw + pitch)</span>
+    <span><kbd>Shift</kbd> / <kbd>Right Click</kbd> boost</span>
+    <span><kbd>F</kbd> wall reflections</span>
+    <span><kbd>Esc</kbd> pause</span>
+  </div>
+  <div class="cta">Click to play</div>
+</div>
+
+<div id="pauseScreen" class="overlay hidden">
+  <div class="big" style="color:#7fd4ff">PAUSED</div>
+  <div class="subtitle">Pointer released.</div>
+  <div class="cta">Click to resume</div>
+</div>
+
+<div id="overScreen" class="overlay hidden">
+  <div class="big" style="color:var(--danger)">CRASHED</div>
+  <div class="final">Score <b id="finalScore">0</b> &nbsp;·&nbsp; Length <b id="finalLen">0</b></div>
+  <div class="final" id="finalRivals"></div>
+  <div class="newbest hidden" id="newBest">★ NEW BEST ★</div>
+  <div class="cta">Click to retry</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Reflector.js"></script>
+<script>
+(() => {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // Config
+  // ------------------------------------------------------------------
+  const CFG = {
+    arena: { x: 42, y: 54, z: 42 },       // half-extent (x,z) and height (y from 0)
+    startLen: 8,
+    maxLen: 220,
+    spacing: 0.85,                          // body segment spacing
+    headRadius: 0.55,
+    segRadius: 0.5,
+    collideDist: 0.72,                      // head<->segment center distance to die
+    skipSelf: 3,                            // ignore first N segments (neck overlap)
+    baseSpeed: 13,
+    boostSpeed: 21,
+    speedPerFood: 0.5,
+    maxSpeed: 34,
+    growPerFood: 2,
+    minStep: 0.06,                          // record path point every >= this travel
+    eatRadius: 1.7,
+    mouseSens: 0.0022,
+    pitchLimit: 1.55,                       // ~88.8 deg
+    wallMargin: 0.5,
+    reflTex: 256,                           // reflection render target size
+    cpuCount: 3,
+    foodCount: 5,
+    cpu: {
+      baseSpeed: 12,
+      speedPerFood: 0.4,
+      maxSpeed: 27,
+      turnRate: 5.2,                        // rad/s max heading change
+      steerEvery: 0.16,                     // re-plan interval
+      respawn: [2.5, 4.5],                  // dead -> respawn delay range (s)
+      lookAhead: [1.5, 3, 5, 7.5],          // probe distances when scoring a heading
+      safeClear: 1.6,                       // clearance below this is heavily penalized
+    },
+  };
+
+  const COLOR = {
+    bg: 0x05060a,
+    grid: 0x12324a,
+    gridMajor: 0x1c5d7a,
+    wall: 0x1c6ea0,
+    food: 0xffd166,
+    player: { head: 0x4dff88, tail: 0x0e5c3a },
+    cpus: [
+      { name: "VIPER", head: 0xff5470, tail: 0x6b1a2c },
+      { name: "COBRA", head: 0x7fd4ff, tail: 0x14506e },
+      { name: "MAMBA", head: 0xc77dff, tail: 0x4a2170 },
+    ],
+  };
+
+  // ------------------------------------------------------------------
+  // Renderer / scene / camera
+  // ------------------------------------------------------------------
+  const app = document.getElementById("app");
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  app.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(COLOR.bg);
+  scene.fog = new THREE.Fog(COLOR.bg, 40, 150);
+
+  const camera = new THREE.PerspectiveCamera(78, window.innerWidth / window.innerHeight, 0.1, 400);
+
+  // Lights
+  scene.add(new THREE.HemisphereLight(0xbfe8ff, 0x0a1420, 0.9));
+  const dir = new THREE.DirectionalLight(0xffffff, 0.7);
+  dir.position.set(20, 60, 10);
+  scene.add(dir);
+
+  // ------------------------------------------------------------------
+  // Arena: floor grid + wireframe box + faint walls
+  // ------------------------------------------------------------------
+  const { x: AX, y: AY, z: AZ } = CFG.arena;
+
+  // Floor grid
+  const grid = new THREE.GridHelper(Math.max(AX, AZ) * 2, Math.max(AX, AZ) * 2, COLOR.gridMajor, COLOR.grid);
+  grid.position.y = 0;
+  scene.add(grid);
+
+  // Faint floor plane for depth
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(AX * 2, AZ * 2),
+    new THREE.MeshBasicMaterial({ color: 0x071019, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.02;
+  scene.add(floor);
+
+  // Arena wireframe box (from y=0 to y=AY)
+  const box = new THREE.BoxGeometry(AX * 2, AY, AZ * 2);
+  const edges = new THREE.EdgesGeometry(box);
+  const wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: COLOR.wall, transparent: true, opacity: 0.5 }));
+  wire.position.y = AY / 2;
+  scene.add(wire);
+
+  // Glass wall panels with live planar reflections (THREE.Reflector), so the
+  // walls read clearly when you approach them — your tail, rivals and orbs all
+  // mirror in the glass. Falls back to faint panels if Reflector is unavailable.
+  // plane normals must point INTO the arena — the reflector only renders
+  // when the camera sits on the normal side of the plane
+  const wallDefs = [
+    { w: AX * 2, h: AY, pos: [0, AY / 2, -AZ] },                    // back, +Z
+    { w: AX * 2, h: AY, pos: [0, AY / 2, AZ], ry: Math.PI },        // front, -Z
+    { w: AZ * 2, h: AY, pos: [-AX, AY / 2, 0], ry: Math.PI / 2 },   // left, +X
+    { w: AZ * 2, h: AY, pos: [AX, AY / 2, 0], ry: -Math.PI / 2 },   // right, -X
+    { w: AX * 2, h: AZ * 2, pos: [0, AY, 0], rx: Math.PI / 2 },     // ceiling, -Y
+  ];
+  const orientWall = (o, def) => {
+    o.position.set(def.pos[0], def.pos[1], def.pos[2]);
+    o.rotation.set(def.rx || 0, def.ry || 0, 0);
+  };
+
+  const mirrors = [];
+  if (typeof THREE.Reflector === "function") {
+    for (const def of wallDefs) {
+      const r = new THREE.Reflector(new THREE.PlaneGeometry(def.w, def.h), {
+        textureWidth: CFG.reflTex,
+        textureHeight: CFG.reflTex,
+      });
+      orientWall(r, def);
+      // keep the reflector's render target + texture matrix, blend through a glass material
+      const tDiffuse = r.material.uniforms.tDiffuse.value;
+      const textureMatrix = r.material.uniforms.textureMatrix.value;
+      r.material.dispose();
+      r.material = new THREE.ShaderMaterial({
+        uniforms: {
+          tDiffuse: { value: tDiffuse },
+          textureMatrix: { value: textureMatrix },
+          uColor: { value: new THREE.Color(0x0e2a3d) },
+          uBaseAlpha: { value: 0.16 },
+          uRefl: { value: 1.0 },
+          uFresnel: { value: 2.2 },
+        },
+        transparent: true,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+        vertexShader: `
+          uniform mat4 textureMatrix;
+          varying vec4 vUv;
+          varying vec3 vNormalV;
+          varying vec3 vViewV;
+          void main() {
+            vUv = textureMatrix * vec4(position, 1.0);
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            vNormalV = normalize(normalMatrix * normal);
+            vViewV = normalize(-mvPosition.xyz);
+            gl_Position = projectionMatrix * mvPosition;
+          }`,
+        fragmentShader: `
+          uniform sampler2D tDiffuse;
+          uniform vec3 uColor;
+          uniform float uBaseAlpha;
+          uniform float uRefl;
+          uniform float uFresnel;
+          varying vec4 vUv;
+          varying vec3 vNormalV;
+          varying vec3 vViewV;
+          void main() {
+            vec3 refl = texture2DProj(tDiffuse, vUv).rgb;
+            // glass: faint base tint, stronger reflection at grazing angles
+            float fres = pow(1.0 - abs(dot(normalize(vNormalV), normalize(vViewV))), uFresnel);
+            float mixAmt = clamp(uRefl * (0.3 + 0.7 * fres), 0.0, 1.0);
+            gl_FragColor = vec4(mix(uColor, refl, mixAmt), clamp(uBaseAlpha + mixAmt * 0.5, 0.0, 1.0));
+          }`,
+      });
+      scene.add(r);
+      mirrors.push(r);
+    }
+    // mirrors must not render inside each other: hide all mirrors for the
+    // duration of every reflection pass
+    for (const m of mirrors) {
+      const orig = m.onBeforeRender;
+      m.onBeforeRender = (renderer, theScene, camera) => {
+        const vis = mirrors.map(x => x.visible);
+        for (const x of mirrors) x.visible = false;
+        orig.call(m, renderer, theScene, camera);
+        mirrors.forEach((x, i) => { x.visible = vis[i]; });
+      };
+    }
+  } else {
+    const wallMat = new THREE.MeshBasicMaterial({ color: 0x0e2a3d, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false });
+    for (const def of wallDefs) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(def.w, def.h), wallMat);
+      orientWall(m, def);
+      scene.add(m);
+    }
+  }
+
+  // Reference starfield / dust for depth perception
+  (function makeStars() {
+    const n = 900;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3 + 0] = (Math.random() - 0.5) * AX * 2;
+      pos[i * 3 + 1] = Math.random() * AY;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * AZ * 2;
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const m = new THREE.PointsMaterial({ color: 0x9fd8ff, size: 0.12, transparent: true, opacity: 0.5, sizeAttenuation: true });
+    scene.add(new THREE.Points(g, m));
+  })();
+
+  // ------------------------------------------------------------------
+  // Snake (player + CPU rivals share this class)
+  // ------------------------------------------------------------------
+  const snakesGroup = new THREE.Group();
+  scene.add(snakesGroup);
+
+  const segGeo = new THREE.SphereGeometry(CFG.segRadius, 20, 16);
+  const headGeo = new THREE.SphereGeometry(CFG.headRadius, 24, 18);
+
+  class Snake {
+    constructor(name, colors, isPlayer) {
+      this.name = name;
+      this.colors = colors;
+      this.isPlayer = isPlayer;
+      this.head = new THREE.Vector3();
+      this.dir = new THREE.Vector3(0, 0, -1);   // current heading (unit)
+      this.desired = new THREE.Vector3(0, 0, -1); // AI target heading
+      this.yaw = 0;
+      this.pitch = 0;
+      this.bodyLen = CFG.startLen;
+      this.speed = CFG.baseSpeed;
+      this.turnRate = isPlayer ? 0 : CFG.cpu.turnRate * (0.9 + Math.random() * 0.3);
+      this.score = 0;
+      this.alive = true;
+      this.respawnTimer = 0;
+      this.steerTimer = 0;
+      this.path = [];
+      this.segs = [];
+      this._euler = new THREE.Euler(0, 0, 0, "YXZ");
+
+      const cHead = new THREE.Color(colors.head);
+      const cTail = new THREE.Color(colors.tail);
+      const tmp = new THREE.Color();
+      for (let i = 0; i < CFG.maxLen; i++) {
+        const t = CFG.maxLen > 1 ? i / (CFG.maxLen - 1) : 0;
+        tmp.copy(cHead).lerp(cTail, t);
+        const mat = new THREE.MeshStandardMaterial({
+          color: tmp, emissive: tmp, emissiveIntensity: 0.35,
+          roughness: 0.35, metalness: 0.1,
+        });
+        const m = new THREE.Mesh(i === 0 ? headGeo : segGeo, mat);
+        m.visible = false;
+        snakesGroup.add(m);
+        this.segs.push(m);
+      }
+    }
+
+    reset(pos, dirVec) {
+      this.head.copy(pos);
+      this.dir.copy(dirVec);
+      if (this.dir.lengthSq() < 1e-9) this.dir.set(0, 0, -1);
+      this.dir.normalize();
+      this.desired.copy(this.dir);
+      this.bodyLen = CFG.startLen;
+      this.speed = this.isPlayer ? CFG.baseSpeed : CFG.cpu.baseSpeed * (0.92 + Math.random() * 0.16);
+      this.score = 0;
+      this.alive = true;
+      this.respawnTimer = 0;
+      this.steerTimer = Math.random() * CFG.cpu.steerEvery;
+      this.initPath();
+      this.layoutBody();
+    }
+
+    // Player heading comes from mouse yaw/pitch
+    syncDir() {
+      this._euler.set(this.pitch, this.yaw, 0);
+      this.dir.set(0, 0, -1).applyEuler(this._euler);
+    }
+
+    initPath() {
+      this.path = [];
+      // pre-fill a straight tail extending behind the current heading
+      const steps = Math.ceil((this.bodyLen * CFG.spacing) / CFG.minStep) + 8;
+      for (let i = steps; i >= 0; i--) {
+        this.path.push(new THREE.Vector3(
+          this.head.x - this.dir.x * i * CFG.minStep,
+          this.head.y - this.dir.y * i * CFG.minStep,
+          this.head.z - this.dir.z * i * CFG.minStep
+        ));
+      }
+      this.path[this.path.length - 1].copy(this.head);
+    }
+
+    recordPath() {
+      const last = this.path[this.path.length - 1];
+      if (this.head.distanceTo(last) >= CFG.minStep) {
+        this.path.push(this.head.clone());
+        // prune old points beyond what the tail needs
+        const needed = Math.ceil((this.bodyLen * CFG.spacing) / CFG.minStep) + 6;
+        if (this.path.length > needed) this.path.splice(0, this.path.length - needed);
+      }
+    }
+
+    // Rotate `dir` toward `target`, limited by turnRate (rad/s)
+    turnToward(target, dt) {
+      let c = this.dir.dot(target);
+      c = c > 1 ? 1 : c < -1 ? -1 : c;
+      const ang = Math.acos(c);
+      const maxAng = this.turnRate * dt;
+      if (ang < 1e-5 || ang <= maxAng) { this.dir.copy(target); return; }
+      _axis.crossVectors(this.dir, target);
+      if (_axis.lengthSq() < 1e-8) {
+        // (nearly) opposite heading: pick any perpendicular axis
+        const up = Math.abs(this.dir.y) < 0.9 ? Y_AXIS : X_AXIS;
+        _axis.crossVectors(this.dir, up);
+      }
+      _axis.normalize();
+      this.dir.applyAxisAngle(_axis, maxAng);
+    }
+
+    move(dt, desired, spdOverride) {
+      if (desired && this.turnRate > 0) this.turnToward(desired, dt);
+      const v = spdOverride === undefined ? this.speed : spdOverride;
+      this.head.addScaledVector(this.dir, v * dt);
+      this.recordPath();
+      this.layoutBody();
+    }
+
+    // Fill segs by walking the path back from the head.
+    // Segment s sits at distance (s+1)*spacing from the head along the traveled path.
+    layoutBody() {
+      const path = this.path;
+      if (path.length === 0) return;
+      let idx = path.length - 1;   // current path point (start = head)
+      let cur = path[idx];
+      let acc = 0;                 // distance from head to `cur`
+      let nextAt = CFG.spacing;    // distance (from head) of the next segment to place
+      let seg = 0;
+
+      while (seg < this.bodyLen) {
+        const mesh = this.segs[seg];
+        if (idx === 0) {
+          // Path exhausted: pin the rest to the oldest point
+          mesh.position.copy(cur);
+          mesh.visible = true;
+          seg++;
+          continue;
+        }
+        const prev = path[idx - 1];
+        const segLen = cur.distanceTo(prev);
+        if (acc + segLen >= nextAt - 1e-9) {
+          // This body segment lands between cur and prev
+          const need = nextAt - acc;
+          const t = segLen > 1e-6 ? need / segLen : 0;
+          mesh.position.copy(cur).lerp(prev, t);
+          mesh.visible = true;
+          seg++;
+          nextAt += CFG.spacing;
+          // Don't consume the path segment yet; the next body segment may
+          // also land on the same path segment (multiple fits).
+        } else {
+          // Not far enough yet — consume this path segment and keep walking back
+          acc += segLen;
+          cur = prev;
+          idx--;
+        }
+      }
+      for (let s = seg; s < CFG.maxLen; s++) this.segs[s].visible = false;
+    }
+
+    die() {
+      if (!this.alive) return;
+      this.alive = false;
+      for (let i = 0; i < this.segs.length; i++) this.segs[i].visible = false;
+      this.path.length = 0;
+    }
+
+    eat(spdPerFood, maxSpd) {
+      this.bodyLen = Math.min(CFG.maxLen, this.bodyLen + CFG.growPerFood);
+      this.speed = Math.min(maxSpd, this.speed + spdPerFood);
+    }
+  }
+
+  // temp vectors (shared, single-threaded)
+  const X_AXIS = new THREE.Vector3(1, 0, 0);
+  const Y_AXIS = new THREE.Vector3(0, 1, 0);
+  const _axis = new THREE.Vector3();
+  const _a1 = new THREE.Vector3();
+  const _a2 = new THREE.Vector3();
+  const _look = new THREE.Vector3();
+  const _panic = new THREE.Vector3();
+  const _hp = new THREE.Vector3();
+  const _hd = new THREE.Vector3();
+  const _rp = new THREE.Vector3();
+  const _rp2 = new THREE.Vector3();
+  const CANDS = [];
+  for (let i = 0; i < 10; i++) CANDS.push(new THREE.Vector3());
+
+  // ------------------------------------------------------------------
+  // Snakes: 1 player + 3 CPU rivals
+  // ------------------------------------------------------------------
+  const snakes = [];
+  const cpus = [];
+
+  const player = new Snake("YOU", COLOR.player, true);
+  snakes.push(player);
+
+  for (let i = 0; i < CFG.cpuCount; i++) {
+    const def = COLOR.cpus[i % COLOR.cpus.length];
+    const s = new Snake(def.name, { head: def.head, tail: def.tail }, false);
+    cpus.push(s);
+    snakes.push(s);
+  }
+
+  // starting corners (opposite the arena center)
+  const cpuHome = [
+    [-AX * 0.55, AY * 0.42, -AZ * 0.55],
+    [ AX * 0.55, AY * 0.42,  AZ * 0.55],
+    [-AX * 0.55, AY * 0.42,  AZ * 0.55],
+  ];
+
+  // ------------------------------------------------------------------
+  // Food: shared orbs, one pool for every snake
+  // ------------------------------------------------------------------
+  const foodGroup = new THREE.Group();
+  scene.add(foodGroup);
+
+  const foods = [];
+  {
+    const geo = new THREE.SphereGeometry(0.8, 24, 18);
+    const mat = new THREE.MeshStandardMaterial({ color: COLOR.food, emissive: COLOR.food, emissiveIntensity: 0.9, roughness: 0.3 });
+    for (let i = 0; i < CFG.foodCount; i++) {
+      const mesh = new THREE.Mesh(geo, mat);
+      const light = new THREE.PointLight(COLOR.food, 0.9, 20);
+      mesh.add(light);
+      foodGroup.add(mesh);
+      foods.push({ mesh, light, pos: new THREE.Vector3(), phase: Math.random() * Math.PI * 2 });
+    }
+  }
+
+  function randomFoodPos(out) {
+    const m = 3;
+    for (let tries = 0; tries < 40; tries++) {
+      out.set(
+        (Math.random() * 2 - 1) * (AX - m),
+        m + Math.random() * (AY - 2 * m),
+        (Math.random() * 2 - 1) * (AZ - m)
+      );
+      // keep away from every snake's head and body
+      let ok = true;
+      for (const s of snakes) {
+        if (!s.alive) continue;
+        if (out.distanceTo(s.head) < 10) { ok = false; break; }
+        for (let i = 0; ok && i < s.bodyLen; i++) {
+          const seg = s.segs[i];
+          if (seg.visible && seg.position.distanceTo(out) < 4) ok = false;
+        }
+      }
+      if (ok) return true;
+    }
+    // fallback: any point
+    out.set(0, AY * 0.5, 0);
+    return true;
+  }
+
+  function spawnFood(f) {
+    randomFoodPos(f.pos);
+    f.mesh.position.copy(f.pos);
+  }
+
+  function eatAll() {
+    for (const s of snakes) {
+      if (!s.alive) continue;
+      for (const f of foods) {
+        if (f.pos.distanceToSquared(s.head) < CFG.eatRadius * CFG.eatRadius) {
+          if (s.isPlayer) sfxEat();
+          s.eat(s.isPlayer ? CFG.speedPerFood : CFG.cpu.speedPerFood,
+                     s.isPlayer ? CFG.maxSpeed : CFG.cpu.maxSpeed);
+          if (s.isPlayer) s.score += 10;
+          spawnFood(f);
+          if (s.isPlayer) updateHUD();
+          break; // one orb per snake per frame
+        }
+      }
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Audio (tiny WebAudio SFX, no assets)
+  // ------------------------------------------------------------------
+  let actx = null;
+  function audio() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {}
+    }
+    return actx;
+  }
+  function beep(freq, dur, type = "sine", gain = 0.15, slideTo = null) {
+    const ctx = audio();
+    if (!ctx) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, ctx.currentTime);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, ctx.currentTime + dur);
+    g.gain.setValueAtTime(gain, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + dur);
+    o.connect(g).connect(ctx.destination);
+    o.start();
+    o.stop(ctx.currentTime + dur + 0.02);
+  }
+  const sfxEat = () => { beep(520, 0.12, "triangle", 0.18, 880); };
+  const sfxOver = () => { beep(320, 0.5, "sawtooth", 0.16, 90); };
+  const sfxCpuDie = () => { beep(180, 0.16, "square", 0.045); };
+
+  // ------------------------------------------------------------------
+  // Collision helpers
+  // ------------------------------------------------------------------
+  function hitWalls(p) {
+    const m = CFG.wallMargin;
+    return p.x < -AX + m || p.x > AX - m || p.y < m || p.y > AY - m || p.z < -AZ + m || p.z > AZ - m;
+  }
+
+  // head of `s` vs every other snake's body + its own body (skipping the neck)
+  function hitBodies(s) {
+    const h2 = CFG.collideDist * CFG.collideDist;
+    for (const o of snakes) {
+      if (o === s || !o.alive) continue;
+      for (let i = 0; i < o.bodyLen; i++) {
+        const m = o.segs[i];
+        if (!m.visible) continue;
+        if (m.position.distanceToSquared(s.head) < h2) return true;
+      }
+    }
+    for (let i = CFG.skipSelf; i < s.bodyLen; i++) {
+      const m = s.segs[i];
+      if (!m.visible) continue;
+      if (m.position.distanceToSquared(s.head) < h2) return true;
+    }
+    return false;
+  }
+
+  // Smallest clearance of point `p` to walls or any snake body.
+  // For `owner` we skip the neck segments (they hug the head by design).
+  function clearance(p, owner) {
+    let d = Math.min(p.x + AX, AX - p.x, p.y, AY - p.y, p.z + AZ, AZ - p.z);
+    if (d < 0) return d;
+    for (const s of snakes) {
+      if (!s.alive) continue;
+      const start = s === owner ? CFG.skipSelf + 1 : 0;
+      for (let i = start; i < s.bodyLen; i++) {
+        const m = s.segs[i];
+        if (!m.visible) continue;
+        const dd = m.position.distanceTo(p) - 1.05; // sum of head/seg radii
+        if (dd < d) { d = dd; if (d < 0.05) return d; }
+      }
+    }
+    return d;
+  }
+
+  // ------------------------------------------------------------------
+  // CPU brain
+  // ------------------------------------------------------------------
+  function steerCPU(s) {
+    // 1) aim at nearest orb
+    let tf = null, td2 = Infinity;
+    for (const f of foods) {
+      const d2 = f.pos.distanceToSquared(s.head);
+      if (d2 < td2) { td2 = d2; tf = f; }
+    }
+    const W = s.desired;
+    if (tf) W.copy(tf.pos).sub(s.head).normalize();
+    else W.copy(s.dir);
+
+    // 2) steer away from nearby walls (soft repulsion)
+    const buf = 9;
+    const wl = s.head.x + AX, wr = AX - s.head.x,
+          wb = s.head.y,     wt = AY - s.head.y,
+          wf = s.head.z + AZ, wk = AZ - s.head.z;
+    if (wl < buf) W.x += (1 - wl / buf) * 1.7;
+    if (wr < buf) W.x -= (1 - wr / buf) * 1.7;
+    if (wb < buf) W.y += (1 - wb / buf) * 1.7;
+    if (wt < buf) W.y -= (1 - wt / buf) * 1.7;
+    if (wf < buf) W.z += (1 - wf / buf) * 1.7;
+    if (wk < buf) W.z -= (1 - wk / buf) * 1.7;
+    if (W.lengthSq() < 1e-6) W.copy(s.dir);
+    W.normalize();
+
+    // 3) sample candidate headings: the wall-corrected aim, rotated copies,
+    //    plus the current heading (stability), and score each by clearance.
+    const ref = Math.abs(W.y) < 0.9 ? Y_AXIS : X_AXIS;
+    _a1.crossVectors(W, ref).normalize();
+    _a2.crossVectors(W, _a1).normalize();
+    let n = 0;
+    CANDS[n++].copy(W);
+    const angs = [0.5, 0.9, 1.4, 2.0]; // ~29° .. 115°
+    for (const a of angs) {
+      CANDS[n++].copy(W).applyAxisAngle(_a1, a);
+      CANDS[n++].copy(W).applyAxisAngle(_a2, a * 0.7);
+    }
+    CANDS[n++].copy(s.dir);
+
+    let bestI = 0, bestS = -Infinity;
+    for (let i = 0; i < n; i++) {
+      const c = CANDS[i];
+      let clear = Infinity;
+      for (const L of CFG.cpu.lookAhead) {
+        _look.copy(s.head).addScaledVector(c, L);
+        const d = clearance(_look, s);
+        if (d < clear) { clear = d; if (clear < 0) break; }
+      }
+      let score = clear;
+      if (clear < CFG.cpu.safeClear) score -= (CFG.cpu.safeClear - clear) * 8; // hard safety penalty
+      score += Math.max(0, c.dot(s.dir)) * 0.8;   // prefer stable, small corrections
+      score += c.dot(W) * 0.3;                     // drift back toward the food
+      if (score > bestS) { bestS = score; bestI = i; }
+    }
+    s.desired.copy(CANDS[bestI]);
+  }
+
+  function respawnCPU(s) {
+    let bestMin = -1;
+    let ok = false;
+    for (let t = 0; t < 80; t++) {
+      _rp.set(
+        (Math.random() * 2 - 1) * (AX - 6),
+        6 + Math.random() * (AY - 12),
+        (Math.random() * 2 - 1) * (AZ - 6)
+      );
+      let minD = Infinity;
+      for (const o of snakes) {
+        if (!o.alive) continue;
+        let d = _rp.distanceTo(o.head);
+        if (d < minD) minD = d;
+        for (let i = 0; i < o.bodyLen; i++) {
+          const m = o.segs[i];
+          if (!m.visible) continue;
+          d = _rp.distanceTo(m.position);
+          if (d < minD) minD = d;
+        }
+      }
+      if (minD > 9) {
+        s.reset(_rp, randDir(_hd));
+        ok = true;
+        break;
+      }
+      if (minD > bestMin) { bestMin = minD; _rp2.copy(_rp); }
+    }
+    if (!ok) {
+      if (bestMin < 0) _rp2.set(0, AY * 0.5, 0); // never found room: use center
+      s.reset(_rp2, randDir(_hd));
+    }
+    s.alive = true;
+  }
+
+  function randDir(out) {
+    const th = Math.random() * Math.PI * 2;
+    const u = Math.random() * 2 - 1;
+    const r = Math.sqrt(1 - u * u);
+    return out.set(r * Math.cos(th), u, r * Math.sin(th));
+  }
+
+  function updateCPU(s, dt) {
+    if (!s.alive) {
+      s.respawnTimer -= dt;
+      if (s.respawnTimer <= 0) respawnCPU(s);
+      return;
+    }
+    s.steerTimer -= dt;
+    if (s.steerTimer <= 0) {
+      steerCPU(s);
+      s.steerTimer = CFG.cpu.steerEvery * (0.75 + Math.random() * 0.5);
+    }
+    // panic: if something is about to be hit between plans, re-plan now
+    _panic.copy(s.head).addScaledVector(s.dir, 1.4);
+    if (clearance(_panic, s) < 0.7) {
+      steerCPU(s);
+      s.steerTimer = 0.12;
+    }
+    s.move(dt, s.desired);
+    if (hitWalls(s.head) || hitBodies(s)) {
+      s.die();
+      s.respawnTimer = CFG.cpu.respawn[0] + Math.random() * (CFG.cpu.respawn[1] - CFG.cpu.respawn[0]);
+      sfxCpuDie();
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Game state + UI
+  // ------------------------------------------------------------------
+  const state = { mode: "ready" }; // ready | playing | paused | over
+  let best = 0;
+  try { best = parseInt(localStorage.getItem("fp_snake_best") || "0", 10) || 0; } catch (e) {}
+
+  const ui = {
+    score: document.getElementById("scoreVal"),
+    len: document.getElementById("lenVal"),
+    spd: document.getElementById("spdVal"),
+    start: document.getElementById("startScreen"),
+    pause: document.getElementById("pauseScreen"),
+    over: document.getElementById("overScreen"),
+    finalScore: document.getElementById("finalScore"),
+    finalLen: document.getElementById("finalLen"),
+    finalRivals: document.getElementById("finalRivals"),
+    newBest: document.getElementById("newBest"),
+  };
+
+  function updateHUD() {
+    ui.score.textContent = player.score;
+    ui.len.textContent = player.bodyLen;
+    ui.spd.textContent = Math.round(player.speed);
+  }
+
+  // rivals leaderboard rows
+  const rivalRows = cpus.map((s) => {
+    const row = document.createElement("div");
+    row.className = "rrow";
+    const hex = "#" + new THREE.Color(s.colors.head).getHexString();
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    dot.style.background = hex;
+    dot.style.boxShadow = `0 0 8px ${hex}`;
+    const name = document.createElement("span");
+    name.className = "rname";
+    name.textContent = s.name;
+    const val = document.createElement("span");
+    val.className = "rlen";
+    val.style.color = hex;
+    val.textContent = String(CFG.startLen);
+    row.appendChild(dot);
+    row.appendChild(name);
+    row.appendChild(val);
+    document.getElementById("rivals").appendChild(row);
+    return { row, val };
+  });
+
+  function updateRivalsHUD() {
+    cpus.forEach((s, i) => {
+      rivalRows[i].val.textContent = s.alive ? String(s.bodyLen) : "×";
+      rivalRows[i].row.classList.toggle("dead", !s.alive);
+    });
+  }
+
+  function resetGame() {
+    player.reset(new THREE.Vector3(0, AY * 0.5, 0), new THREE.Vector3(0, 0, -1));
+    player.yaw = 0;
+    player.pitch = 0;
+    for (let i = 0; i < cpus.length; i++) {
+      const h = cpuHome[i % cpuHome.length];
+      _hp.set(h[0], h[1], h[2]);
+      _hd.set(0, 0, 0).sub(_hp);
+      _hd.y += (Math.random() - 0.5) * 1.4;
+      _hd.normalize();
+      cpus[i].reset(_hp, _hd);
+    }
+    for (const f of foods) spawnFood(f);
+    camera.position.copy(player.head);
+    camera.rotation.set(0, 0, 0, "YXZ");
+    updateHUD();
+    updateRivalsHUD();
+  }
+
+  function setMode(m) {
+    state.mode = m;
+    ui.start.classList.toggle("hidden", m !== "ready");
+    ui.pause.classList.toggle("hidden", m !== "paused");
+    ui.over.classList.toggle("hidden", m !== "over");
+    document.getElementById("crosshair").style.display = (m === "playing") ? "block" : "none";
+  }
+
+  function gameOver() {
+    if (state.mode !== "playing") return;
+    sfxOver();
+    const isNew = player.score > best;
+    if (isNew) {
+      best = player.score;
+      try { localStorage.setItem("fp_snake_best", String(best)); } catch (e) {}
+    }
+    ui.finalScore.textContent = player.score;
+    ui.finalLen.textContent = player.bodyLen;
+    ui.finalRivals.textContent = "Rivals  " + cpus.map((s) => `${s.name} ${s.alive ? s.bodyLen : "×"}`).join("  ·  ");
+    ui.newBest.classList.toggle("hidden", !isNew);
+    document.exitPointerLock && document.exitPointerLock();
+    setMode("over");
+  }
+
+  // ------------------------------------------------------------------
+  // Input
+  // ------------------------------------------------------------------
+  // Boost: Shift key and/or right mouse button
+  let boostKey = false, boostMouse = false;
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Shift") boostKey = true;
+  });
+  window.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") boostKey = false;
+  });
+  window.addEventListener("mousedown", (e) => {
+    if (e.button === 2) boostMouse = true;
+  });
+  window.addEventListener("mouseup", (e) => {
+    if (e.button === 2) boostMouse = false;
+  });
+  window.addEventListener("blur", () => {
+    boostKey = false;
+    boostMouse = false;
+  });
+  // right-click would otherwise pop the context menu
+  document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+  // F toggles wall reflections (perf escape hatch)
+  let reflectionsOn = mirrors.length > 0;
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "f" || e.key === "F") {
+      reflectionsOn = !reflectionsOn;
+      for (const m of mirrors) m.visible = reflectionsOn;
+    }
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (state.mode !== "playing") return;
+    const mx = e.movementX || 0, my = e.movementY || 0;
+    player.yaw -= mx * CFG.mouseSens;
+    player.pitch -= my * CFG.mouseSens;
+    const lim = CFG.pitchLimit;
+    if (player.pitch > lim) player.pitch = lim;
+    if (player.pitch < -lim) player.pitch = -lim;
+  });
+
+  function requestLock() {
+    const el = renderer.domElement;
+    const p = el.requestPointerLock();
+    if (p && p.catch) p.catch(() => {});
+  }
+
+  ui.start.addEventListener("click", () => {
+    audio();
+    requestLock();
+  });
+  ui.pause.addEventListener("click", () => {
+    audio();
+    requestLock();
+  });
+  ui.over.addEventListener("click", () => {
+    audio();
+    resetGame();
+    requestLock();
+  });
+
+  document.addEventListener("pointerlockchange", () => {
+    const locked = document.pointerLockElement === renderer.domElement;
+    if (locked) {
+      if (state.mode === "ready") resetGame();
+      // Locking resumes the game from any non-playing state — including the
+      // retry-after-crash flow, which re-locks while mode is still "over".
+      if (state.mode !== "playing") setMode("playing");
+    } else {
+      if (state.mode === "playing") setMode("paused");
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // Main loop
+  // ------------------------------------------------------------------
+  let last = performance.now();
+  let foodPulse = 0;
+  let hudTimer = 0;
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    let dt = (now - last) / 1000;
+    last = now;
+    if (dt > 0.05) dt = 0.05; // clamp big gaps
+
+    if (state.mode === "playing") {
+      // --- player ---
+      player.syncDir();
+      const curSpeed = (boostKey || boostMouse) ? CFG.boostSpeed : player.speed;
+      player.move(dt, null, curSpeed);
+
+      // camera follows head
+      camera.position.copy(player.head);
+      camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
+
+      // subtle FOV sense of speed
+      const targetFov = 78 + (curSpeed - CFG.baseSpeed) * 0.9;
+      camera.fov += (targetFov - camera.fov) * Math.min(1, dt * 4);
+      camera.updateProjectionMatrix();
+
+      // --- CPU rivals ---
+      for (const s of cpus) updateCPU(s, dt);
+
+      // --- orbs ---
+      eatAll();
+
+      // --- player death ---
+      if (hitWalls(player.head) || hitBodies(player)) gameOver();
+
+      hudTimer -= dt;
+      if (hudTimer <= 0) {
+        hudTimer = 0.15;
+        updateHUD();
+        updateRivalsHUD();
+      }
+    }
+
+    // food pulse animation (always)
+    foodPulse += dt;
+    for (const f of foods) {
+      const s = 1 + Math.sin(foodPulse * 4 + f.phase) * 0.08;
+      f.mesh.scale.setScalar(s);
+      f.mesh.rotation.y += dt * 0.8;
+    }
+
+    renderer.render(scene, camera);
+  }
+
+  window.addEventListener("resize", () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  // init
+  resetGame();
+  setMode("ready");
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
