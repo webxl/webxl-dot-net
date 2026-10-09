@@ -5,6 +5,7 @@ on:
     branches:
       - master
       - deploy-fix
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,12 +14,12 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
-          node-version: 16
+          node-version: 20
 
       - name: Install dependencies
         uses: bahmutov/npm-install@v1
@@ -33,9 +34,9 @@ jobs:
           path: ./dist
 
   deploy:
-    name: Deploy
+    name: Deploy to webxl LXC
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, webxl-ct]
     if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/deploy-fix'
 
     steps:
@@ -43,18 +44,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: production-files
-          path: ./dist
+          path: /tmp/deploy-dist
 
-      - name: SCP Command to Transfer Files to Remote Server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PUBLISH_SSH_HOST }}
-          port: ${{ secrets.PUBLISH_SSH_PORT }}
-          username: ${{ secrets.PUBLISH_SSH_USER }}
-          key: ${{ secrets.PUBLISH_SSH_KEY }}
-          publish_dir: ./dist
-          source: "dist/*"
-          target: "/docker/webxl"
-
-
-
+      - name: Sync to webroot
+        run: |
+          rsync -a --delete /tmp/deploy-dist/ /var/www/webxl/
+          rm -rf /tmp/deploy-dist
