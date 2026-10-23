@@ -21,31 +21,45 @@
   }
   #app { position: fixed; inset: 0; }
   canvas { display: block; }
+  /* generic hide — the more specific .hidden rules below win where they exist */
+  .hidden { display: none; }
 
   /* ---------- HUD ---------- */
   #hud {
     position: fixed; top: 0; left: 0; right: 0;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 18px 22px; pointer-events: none; z-index: 5;
-    text-shadow: 0 2px 10px rgba(0,0,0,.6);
+    display: flex; flex-direction: column; align-items: center; gap: 9px;
+    padding: 14px 0; pointer-events: none; z-index: 5;
+    text-shadow: 0 2px 10px rgba(0,0,0,.75);
     user-select: none;
   }
-  .hgroup { display: flex; gap: 22px; align-items: flex-start; }
-  .hgroup.right { flex-direction: column; align-items: flex-end; gap: 10px; }
-  .stat { display: flex; flex-direction: column; gap: 2px; }
+  /* HUD lives along the top-centre so the four corner cameras stay clear */
+  .hgroup { display: flex; gap: 28px; align-items: flex-start; }
+  .stat { display: flex; flex-direction: column; gap: 2px; align-items: center; }
   .stat .label { font-size: 11px; letter-spacing: 2px; opacity: .55; text-transform: uppercase; }
-  .stat .value { font-size: 26px; font-weight: 700; line-height: 1; }
+  .stat .value { font-size: 24px; font-weight: 700; line-height: 1; }
   #score .value { color: var(--accent); }
   #len .value { color: #7fd4ff; }
   #spd .value { color: var(--accent-2); }
-  .stat.right { align-items: flex-end; }
-  #rivals { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; font-size: 12px; }
+  #rivals { display: flex; flex-direction: row; align-items: center; gap: 16px; font-size: 12px; }
   #rivals .rlabel { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; opacity: .55; }
   #rivals .rrow { display: flex; gap: 7px; align-items: center; }
   #rivals .rrow.dead { opacity: .45; }
   #rivals .dot { width: 7px; height: 7px; border-radius: 50%; }
-  #rivals .rname { width: 54px; text-align: left; letter-spacing: 1px; opacity: .85; }
-  #rivals .rlen { width: 28px; text-align: right; font-weight: 700; }
+  #rivals .rname { text-align: left; letter-spacing: 1px; opacity: .85; }
+  #rivals .rlen { width: 24px; text-align: right; font-weight: 700; }
+
+  /* ---------- corner spectator windows ---------- */
+  .cornerFrame {
+    position: fixed; pointer-events: none; z-index: 4; display: none;
+    border: 1.5px solid rgba(127,212,255,.42);
+    border-radius: 9px;
+    box-shadow: inset 0 0 34px rgba(0,0,0,.55), 0 0 16px rgba(28,110,160,.22);
+  }
+  .cornerFrame .ctag {
+    position: absolute; top: 4px; left: 7px;
+    font-size: 9px; letter-spacing: 1.5px; color: #9fd8ff; opacity: .5;
+    text-shadow: 0 1px 4px #000;
+  }
 
   /* crosshair */
   #crosshair {
@@ -55,6 +69,52 @@
     box-shadow: 0 0 6px rgba(255,255,255,.6);
     pointer-events: none; z-index: 6;
   }
+
+  @keyframes rblink { 50% { opacity: .2; } }
+
+  /* ---------- replay modal ---------- */
+  #replayModal { position: fixed; inset: 0; z-index: 20; }
+  #replayModal.hidden { display: none; }
+  /* The view is a transparent hole punched in the dimmer: the box-shadow paints
+     the backdrop everywhere else, so the WebGL replay can be scissored into the
+     middle of the main canvas and still read as a modal. */
+  #rmView {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: min(82vw, 1180px); height: min(72vh, 664px);
+    border: 2px solid rgba(127,212,255,.5);
+    border-radius: 8px;
+    box-shadow: 0 0 0 100vmax rgba(2,4,8,.86), 0 0 70px rgba(0,0,0,.85);
+    overflow: hidden;
+  }
+  .rmHead {
+    position: absolute; top: 0; left: 0; right: 0; height: 40px; z-index: 2;
+    display: flex; align-items: center; gap: 12px; padding: 0 14px;
+    background: linear-gradient(180deg, rgba(4,8,14,.82), rgba(4,8,14,0));
+    pointer-events: none;
+  }
+  .rmTag {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--danger);
+    text-shadow: 0 0 16px rgba(255,84,112,.55);
+  }
+  .rmTag::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--danger); box-shadow: 0 0 12px var(--danger);
+    animation: rblink 1s step-end infinite;
+  }
+  .rmSub { font-size: 11px; letter-spacing: 1.5px; opacity: .5; }
+  .rmClose {
+    position: absolute; top: 8px; right: 10px; width: 28px; height: 28px;
+    border-radius: 8px; cursor: pointer; pointer-events: auto;
+    border: 1px solid rgba(255,255,255,.2); background: rgba(10,14,22,.72);
+    color: #e8f0ff; font-family: inherit; font-size: 13px; line-height: 1;
+  }
+  .rmClose:hover { background: rgba(40,50,70,.9); }
+  .rmBar {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 3px; z-index: 2;
+    background: rgba(255,255,255,.12);
+  }
+  .rmFill { width: 0%; height: 100%; background: linear-gradient(90deg, #7fd4ff, var(--danger)); }
 
   /* ---------- Overlays ---------- */
   .overlay {
@@ -96,6 +156,43 @@
   .final b { color: var(--accent); font-size: 30px; }
   #finalRivals { font-size: 14px !important; opacity: .7 !important; letter-spacing: 1px; }
   .newbest { color: var(--accent-2); font-weight: 700; letter-spacing: 1px; }
+
+  /* ---------- game over: fades in over the still-running arena ---------- */
+  #overScreen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: radial-gradient(ellipse at center, rgba(6,10,20,.16), rgba(3,5,10,.80));
+    opacity: 0; pointer-events: none;
+    transition: opacity 1.2s ease;
+  }
+  #overScreen.hidden { display: none; }
+  #overScreen.show { opacity: 1; pointer-events: auto; }
+  .overPanel {
+    display: flex; flex-direction: column; align-items: center; gap: 11px;
+    text-align: center; padding: 26px 36px 24px;
+    background: rgba(8,12,22,.72);
+    border: 1px solid rgba(255,84,112,.35);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.6);
+    backdrop-filter: blur(6px);
+    transform: translateY(14px);
+    transition: transform 1.2s cubic-bezier(.16,.84,.3,1);
+  }
+  #overScreen.show .overPanel { transform: translateY(0); }
+  .btnrow { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 6px; }
+  .btn {
+    font-family: inherit; font-size: 14px; font-weight: 700; letter-spacing: .8px;
+    padding: 12px 22px; border-radius: 11px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.06); color: #e8f0ff;
+    transition: transform .12s ease, background .18s ease, border-color .18s ease;
+  }
+  .btn:hover { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.34); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+  .btn.primary {
+    background: linear-gradient(90deg, var(--accent), #7fd4ff); color: #05060a;
+    border-color: transparent; box-shadow: 0 8px 26px rgba(77,255,136,.28);
+  }
 </style>
 </head>
 <body>
@@ -105,17 +202,15 @@
   <div class="hgroup">
     <div class="stat" id="score"><span class="label">Score</span><span class="value" id="scoreVal">0</span></div>
     <div class="stat" id="len"><span class="label">Length</span><span class="value" id="lenVal">0</span></div>
+    <div class="stat" id="spd"><span class="label">Speed</span><span class="value" id="spdVal">0</span></div>
   </div>
-  <div class="hgroup right">
-    <div class="stat right" id="spd"><span class="label">Speed</span><span class="value" id="spdVal">0</span></div>
-    <div id="rivals"><span class="rlabel">Rivals</span></div>
-  </div>
+  <div id="rivals"><span class="rlabel">Rivals</span></div>
 </div>
 <div id="crosshair"></div>
 
 <div id="startScreen" class="overlay">
   <div class="title">SNAKE·3D</div>
-  <div class="subtitle">You are the snake. Fly through a 3D arena, chomp glowing orbs, and grow — but three rival snakes (VIPER, COBRA, MAMBA) hunt the same orbs. Don't touch the walls, your own body, or a rival's body. If a rival's head clips your tail, they die instead.</div>
+  <div class="subtitle">You are the snake. Fly through a 3D arena, chomp glowing orbs, and grow — but three rival snakes (VIPER, COBRA, MAMBA) hunt the same orbs. Don't touch the walls, your own body, or a rival's body. If a rival's head clips your tail, they die instead. Crash and your body bursts into orbs for the rivals to feast on — the arena keeps playing while you watch.</div>
   <div class="keys">
     <span><kbd>Mouse</kbd> steer (yaw + pitch)</span>
     <span><kbd>Shift</kbd> / <kbd>Right Click</kbd> boost</span>
@@ -131,12 +226,28 @@
   <div class="cta">Click to resume</div>
 </div>
 
-<div id="overScreen" class="overlay hidden">
-  <div class="big" style="color:var(--danger)">CRASHED</div>
-  <div class="final">Score <b id="finalScore">0</b> &nbsp;·&nbsp; Length <b id="finalLen">0</b></div>
-  <div class="final" id="finalRivals"></div>
-  <div class="newbest hidden" id="newBest">★ NEW BEST ★</div>
-  <div class="cta">Click to retry</div>
+<div id="overScreen" class="hidden">
+  <div class="overPanel">
+    <div class="big" style="color:var(--danger)">CRASHED</div>
+    <div class="final">Score <b id="finalScore">0</b> &nbsp;·&nbsp; Length <b id="finalLen">0</b></div>
+    <div class="final" id="finalRivals"></div>
+    <div class="newbest hidden" id="newBest">★ NEW BEST ★</div>
+    <div class="btnrow">
+      <button class="btn" id="watchReplay">▶ Watch replay</button>
+      <button class="btn primary" id="retryBtn">Play again</button>
+    </div>
+  </div>
+</div>
+
+<div id="replayModal" class="hidden">
+  <div id="rmView">
+    <div class="rmHead">
+      <span class="rmTag">REPLAY</span>
+      <span class="rmSub" id="rmSub">the final seconds</span>
+      <button class="rmClose" id="replayClose" title="Close (Esc)">✕</button>
+    </div>
+    <div class="rmBar"><div class="rmFill" id="replayFill"></div></div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -336,7 +447,9 @@
     }
   }
 
-  // Reference starfield / dust for depth perception
+  // Reference starfield / dust for depth perception.
+  // Layer 2: shown to the first-person camera only, so it doesn't swamp the
+  // corner spectator windows (up close the points read as big squares).
   (function makeStars() {
     const n = 900;
     const pos = new Float32Array(n * 3);
@@ -348,8 +461,11 @@
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
     const m = new THREE.PointsMaterial({ color: 0x9fd8ff, size: 0.12, transparent: true, opacity: 0.5, sizeAttenuation: true });
-    scene.add(new THREE.Points(g, m));
+    const pts = new THREE.Points(g, m);
+    pts.layers.set(2);
+    scene.add(pts);
   })();
+  camera.layers.enable(2);   // main camera still sees the stars
 
   // ------------------------------------------------------------------
   // Snake (player + CPU rivals share this class)
@@ -581,6 +697,102 @@
     }
   }
 
+  // Explosion debris: when the player crashes, every body segment becomes a
+  // food orb. Each orb borrows the material of the segment it came from, so the
+  // wreckage keeps the snake's exact colour gradient — and rivals can eat it.
+  const DEBRIS_MAX = CFG.maxLen + 24;
+  const debrisGroup = new THREE.Group();
+  scene.add(debrisGroup);
+
+  const debris = [];
+  {
+    const geo = new THREE.SphereGeometry(0.62, 12, 10);
+    const fallback = new THREE.MeshStandardMaterial({
+      color: COLOR.player.head, emissive: COLOR.player.head,
+      emissiveIntensity: 0.6, roughness: 0.35,
+    });
+    for (let i = 0; i < DEBRIS_MAX; i++) {
+      const mesh = new THREE.Mesh(geo, fallback);
+      mesh.visible = false;
+      debrisGroup.add(mesh);
+      debris.push({
+        mesh, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+        active: false, age: 0, phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  const _blastC = new THREE.Vector3();
+
+  function resetPool(pool) {
+    for (const d of pool) {
+      d.active = false;
+      d.vel.set(0, 0, 0);
+      d.mesh.visible = false;
+    }
+  }
+
+  // One orb per visible segment of `segs[0..count)`, thrown outward from the
+  // body's centroid. Returns the number of orbs spawned.
+  function explodeBody(segs, count, pool) {
+    _blastC.set(0, 0, 0);
+    let n = 0;
+    for (let i = 0; i < count; i++) {
+      if (segs[i].visible) { _blastC.add(segs[i].position); n++; }
+    }
+    if (n === 0) return 0;
+    _blastC.multiplyScalar(1 / n);
+    let k = 0;
+    for (let i = 0; i < count && k < pool.length; i++) {
+      const seg = segs[i];
+      if (!seg.visible) continue;
+      const d = pool[k++];
+      d.active = true;
+      d.age = 0;
+      d.pos.copy(seg.position);
+      d.vel.copy(seg.position).sub(_blastC);
+      if (d.vel.lengthSq() < 1e-6) d.vel.set(0, 1, 0); else d.vel.normalize();
+      d.vel.multiplyScalar(1.2 + Math.random() * 2.4);
+      d.vel.y += 0.5 + Math.random() * 1.7;
+      d.mesh.position.copy(seg.position);
+      d.mesh.material = seg.material;
+      d.mesh.rotation.set(0, 0, 0);
+      d.mesh.scale.setScalar(0.01);
+      d.mesh.visible = true;
+    }
+    return k;
+  }
+
+  // Drifting wreckage: scatter velocity eased away, orbs pop in and then pulse.
+  function updatePool(pool, dt, time) {
+    const damp = Math.exp(-1.7 * dt);
+    for (const d of pool) {
+      if (!d.active) continue;
+      d.age += dt;
+      d.vel.multiplyScalar(damp);
+      d.pos.addScaledVector(d.vel, dt);
+      const lim = 1.2;
+      if (d.pos.x < -AX + lim) { d.pos.x = -AX + lim; d.vel.x *= -0.35; }
+      if (d.pos.x >  AX - lim) { d.pos.x =  AX - lim; d.vel.x *= -0.35; }
+      if (d.pos.y < lim)       { d.pos.y = lim;       d.vel.y *= -0.35; }
+      if (d.pos.y > AY - lim)  { d.pos.y = AY - lim;  d.vel.y *= -0.35; }
+      if (d.pos.z < -AZ + lim) { d.pos.z = -AZ + lim; d.vel.z *= -0.35; }
+      if (d.pos.z >  AZ - lim) { d.pos.z =  AZ - lim; d.vel.z *= -0.35; }
+      d.mesh.position.copy(d.pos);
+      const pop = Math.min(1, d.age / 0.22);
+      d.mesh.scale.setScalar(pop * (1 + Math.sin(time * 4.5 + d.phase) * 0.12));
+      d.mesh.rotation.y += dt * 0.9;
+    }
+  }
+
+  // An orb sitting on the lens just reads as a wall of colour — hide any that
+  // the active camera is practically inside.
+  function cullNearCamera(pool, camPos, r2) {
+    for (const d of pool) {
+      if (d.active) d.mesh.visible = d.pos.distanceToSquared(camPos) > r2;
+    }
+  }
+
   function randomFoodPos(out) {
     const m = 3;
     for (let tries = 0; tries < 40; tries++) {
@@ -612,17 +824,28 @@
   }
 
   function eatAll() {
+    const r2 = CFG.eatRadius * CFG.eatRadius;
+    const grow = (s) => {
+      s.eat(s.isPlayer ? CFG.speedPerFood : CFG.cpu.speedPerFood,
+             s.isPlayer ? CFG.maxSpeed : CFG.cpu.maxSpeed);
+      if (s.isPlayer) { s.score += 10; sfxEat(); updateHUD(); }
+    };
     for (const s of snakes) {
       if (!s.alive) continue;
+      let ate = false;
       for (const f of foods) {
-        if (f.pos.distanceToSquared(s.head) < CFG.eatRadius * CFG.eatRadius) {
-          if (s.isPlayer) sfxEat();
-          s.eat(s.isPlayer ? CFG.speedPerFood : CFG.cpu.speedPerFood,
-                     s.isPlayer ? CFG.maxSpeed : CFG.cpu.maxSpeed);
-          if (s.isPlayer) s.score += 10;
-          spawnFood(f);
-          if (s.isPlayer) updateHUD();
-          break; // one orb per snake per frame
+        if (f.pos.distanceToSquared(s.head) < r2) { spawnFood(f); grow(s); ate = true; break; }
+      }
+      // one orb per snake per frame — then the wreckage
+      if (!ate) {
+        for (const d of debris) {
+          if (!d.active) continue;
+          if (d.pos.distanceToSquared(s.head) < r2) {
+            d.active = false;
+            d.mesh.visible = false;
+            grow(s);
+            break;
+          }
         }
       }
     }
@@ -655,6 +878,10 @@
   const sfxEat = () => { beep(520, 0.12, "triangle", 0.18, 880); };
   const sfxOver = () => { beep(320, 0.5, "sawtooth", 0.16, 90); };
   const sfxCpuDie = () => { beep(180, 0.16, "square", 0.045); };
+  const sfxBlast = () => {
+    beep(180, 0.5, "sawtooth", 0.18, 42);
+    beep(96, 0.75, "square", 0.1, 30);
+  };
 
   // ------------------------------------------------------------------
   // Collision helpers
@@ -705,11 +932,16 @@
   // CPU brain
   // ------------------------------------------------------------------
   function steerCPU(s) {
-    // 1) aim at nearest orb
+    // 1) aim at the nearest orb — including any wreckage left by the player
     let tf = null, td2 = Infinity;
     for (const f of foods) {
       const d2 = f.pos.distanceToSquared(s.head);
       if (d2 < td2) { td2 = d2; tf = f; }
+    }
+    for (const d of debris) {
+      if (!d.active) continue;
+      const d2 = d.pos.distanceToSquared(s.head);
+      if (d2 < td2) { td2 = d2; tf = d; }
     }
     const W = s.desired;
     if (tf) W.copy(tf.pos).sub(s.head).normalize();
@@ -829,9 +1061,109 @@
   }
 
   // ------------------------------------------------------------------
+  // Corner spectator windows
+  // Four fixed cameras sit in the four bottom corners of the arena, each
+  // aimed straight at the arena centre, and are drawn into the matching
+  // screen corner using the scissor test (no extra canvases / GL contexts).
+  // ------------------------------------------------------------------
+  const CORNER_FRAC = 0.10;   // each window ≈ 10% of the viewport width
+  const CORNER_MIN = 72;      // ...but never smaller than this
+  const CORNER_MARGIN = 14;
+
+  const cornerCams = [];
+  {
+    const inset = 0.6;                              // nudge inside the walls
+    const target = new THREE.Vector3(0, AY * 0.45, 0);
+    const eyes = [
+      [-AX + inset, 1.0, -AZ + inset],  // 0 -> screen top-left
+      [ AX - inset, 1.0, -AZ + inset],  // 1 -> screen top-right
+      [-AX + inset, 1.0,  AZ - inset],  // 2 -> screen bottom-left
+      [ AX - inset, 1.0,  AZ - inset],  // 3 -> screen bottom-right
+    ];
+    for (const e of eyes) {
+      const cam = new THREE.PerspectiveCamera(90, 1, 0.1, 500);
+      cam.position.set(e[0], e[1], e[2]);
+      cam.lookAt(target);
+      cam.layers.enable(1);   // also render the player's spectator-only head
+      cornerCams.push(cam);
+    }
+  }
+
+  // The first-person camera sits *inside* the player's head, so a head mesh
+  // would fill the screen. Put it on layer 1: hidden from the main camera,
+  // visible only to the corner spectator cams.
+  const playerHead = new THREE.Mesh(
+    new THREE.SphereGeometry(CFG.headRadius * 1.02, 20, 16),
+    new THREE.MeshStandardMaterial({
+      color: COLOR.player.head, emissive: COLOR.player.head,
+      emissiveIntensity: 0.5, roughness: 0.35, metalness: 0.1,
+    })
+  );
+  playerHead.layers.set(1);
+  snakesGroup.add(playerHead);
+
+  // screen-corner frames drawn over the canvas
+  const cornerEls = cornerCams.map((_, i) => {
+    const el = document.createElement("div");
+    el.className = "cornerFrame";
+    const tag = document.createElement("span");
+    tag.className = "ctag";
+    tag.textContent = ["NW", "NE", "SW", "SE"][i];
+    el.appendChild(tag);
+    document.body.appendChild(el);
+    return el;
+  });
+
+  function cornerSize() {
+    return Math.max(CORNER_MIN, Math.round(window.innerWidth * CORNER_FRAC));
+  }
+
+  // CSS rects (top-left origin) + matching scissor y (GL bottom-left origin)
+  function cornerSpots() {
+    const s = cornerSize();
+    const W = window.innerWidth, H = window.innerHeight, m = CORNER_MARGIN;
+    return [
+      { x: m,         y: m         },
+      { x: W - m - s, y: m         },
+      { x: m,         y: H - m - s },
+      { x: W - m - s, y: H - m - s },
+    ].map((p) => ({ x: p.x, y: p.y, s, glY: H - (p.y + s) }));
+  }
+
+  function layoutCornerFrames() {
+    cornerSpots().forEach((p, i) => {
+      const el = cornerEls[i];
+      el.style.left = p.x + "px";
+      el.style.top = p.y + "px";
+      el.style.width = p.s + "px";
+      el.style.height = p.s + "px";
+    });
+  }
+
+  function renderCornerViews() {
+    const spots = cornerSpots();
+    // One live reflection pass per glass wall is already costly; ×4 more for
+    // the corner views is not worth it. Hide the glass here — the grid floor
+    // still shows the arena bounds clearly.
+    const vis = mirrors.map((m) => m.visible);
+    for (const m of mirrors) m.visible = false;
+
+    renderer.setScissorTest(true);
+    for (let i = 0; i < spots.length; i++) {
+      const p = spots[i];
+      renderer.setViewport(p.x, p.glY, p.s, p.s);
+      renderer.setScissor(p.x, p.glY, p.s, p.s);
+      renderer.render(scene, cornerCams[i]);
+    }
+    renderer.setScissorTest(false);
+
+    mirrors.forEach((m, i) => { m.visible = vis[i]; });
+  }
+
+  // ------------------------------------------------------------------
   // Game state + UI
   // ------------------------------------------------------------------
-  const state = { mode: "ready" }; // ready | playing | paused | over
+  const state = { mode: "ready", deathT: 0 }; // ready | playing | paused | dead
   let best = 0;
   try { best = parseInt(localStorage.getItem("fp_snake_best") || "0", 10) || 0; } catch (e) {}
 
@@ -846,6 +1178,8 @@
     finalLen: document.getElementById("finalLen"),
     finalRivals: document.getElementById("finalRivals"),
     newBest: document.getElementById("newBest"),
+    replayModal: document.getElementById("replayModal"),
+    replayFill: document.getElementById("replayFill"),
   };
 
   function updateHUD() {
@@ -897,8 +1231,17 @@
       cpus[i].reset(_hp, _hd);
     }
     for (const f of foods) spawnFood(f);
+    resetPool(debris);
+    replay.open = false;
+    ui.replayModal.classList.add("hidden");
+    ui.over.classList.remove("show");
     camera.position.copy(player.head);
     camera.rotation.set(0, 0, 0, "YXZ");
+    camera.fov = 78;
+    camera.updateProjectionMatrix();
+    playerHead.position.copy(player.head);
+    playerHead.visible = true;
+    clearRecording();
     updateHUD();
     updateRivalsHUD();
   }
@@ -907,13 +1250,26 @@
     state.mode = m;
     ui.start.classList.toggle("hidden", m !== "ready");
     ui.pause.classList.toggle("hidden", m !== "paused");
-    ui.over.classList.toggle("hidden", m !== "over");
+    ui.over.classList.toggle("hidden", m !== "dead");
+    if (m !== "dead") ui.over.classList.remove("show");
     document.getElementById("crosshair").style.display = (m === "playing") ? "block" : "none";
+    document.getElementById("hud").style.display = "flex";
+    const showCams = (m === "playing" || m === "dead");
+    if (showCams) layoutCornerFrames();
+    for (const el of cornerEls) el.style.display = (showCams && !replay.open) ? "block" : "none";
   }
 
-  function gameOver() {
+  // The player crashed. Their body bursts into orbs and the arena carries on
+  // without them — rivals keep hunting, respawn and eat the wreckage — while a
+  // slow pull-out replays the moment. The score panel fades in over the top.
+  function playerDied() {
     if (state.mode !== "playing") return;
+    explodeBody(player.segs, player.bodyLen, debris);   // body -> coloured orbs
+    player.die();
+    playerHead.visible = false;
+    sfxBlast();
     sfxOver();
+
     const isNew = player.score > best;
     if (isNew) {
       best = player.score;
@@ -923,8 +1279,445 @@
     ui.finalLen.textContent = player.bodyLen;
     ui.finalRivals.textContent = "Rivals  " + cpus.map((s) => `${s.name} ${s.alive ? s.bodyLen : "×"}`).join("  ·  ");
     ui.newBest.classList.toggle("hidden", !isNew);
+
+    // the replay button is pointless if we barely got started
+    const watcher = document.getElementById("watchReplay");
+    watcher.style.display = canReplay() ? "" : "none";
+
+    // keep recording for a moment so the replay catches the aftermath
+    rec.dying = true;
+    rec.deathT = rec.t;
+
+    // death cam starts just behind the crash site, then drifts out
+    deathCam.origin.copy(player.head);
+    deathCam.t = 0;
+    deathCam.angle = Math.atan2(-player.dir.z, -player.dir.x);
+    state.deathT = 0;
+    ui.over.classList.remove("show");
+    setMode("dead");
     document.exitPointerLock && document.exitPointerLock();
-    setMode("over");
+  }
+
+  // ------------------------------------------------------------------
+  // Death replay
+  // A rolling recording of every snake (head, heading, length, alive) plus the
+  // orb positions. A separate scene of *ghost* snakes is re-driven from it, so
+  // the live arena can carry on playing while the replay shows in its modal —
+  // and the blast is reconstructed from the player's body at the moment of death.
+  // ------------------------------------------------------------------
+  const REPLAY_SECONDS = 10;   // window recorded *before* the crash
+  const REPLAY_TAIL = 5.0;     // ...plus this many seconds of aftermath
+  const REPLAY_HOLD = 2.0;     // dwell on the final wide shot before looping
+  const ZOOM_DELAY = 0.4;      // quiet beat after the blast before pulling out
+  const ZOOM_SECONDS = 3.2;    // length of the slow zoom-out
+
+  // chase-cam rig: back/up distances grow with body length (capped)
+  const CHASE = {
+    minBack: 11, backPerLen: 0.6, maxBody: 26,
+    baseUp: 6.5, upPerLen: 0.25,
+    look: 4, lookUp: 1.2,
+  };
+  // final wide framing of the crash site during the zoom-out
+  const WIDE = { r: 54, up: 17 };
+
+  // sample layout: [head(3) dir(3) len(1) alive(1)] per snake, then orb xyz
+  const SNAKE_STRIDE = 8;
+  const FOOD_OFF = snakes.length * SNAKE_STRIDE;
+  const SAMPLE_LEN = FOOD_OFF + foods.length * 3;
+
+  const rec = { t: 0, times: [], blobs: [], dying: false, deathT: 0, frozen: false };
+
+  function recordFrame() {
+    if (rec.frozen) return;
+    // Once the player is gone we keep rolling just long enough to capture the
+    // blast and the rivals' reaction, then freeze the tape.
+    if (rec.dying && rec.t - rec.deathT > REPLAY_TAIL) { rec.frozen = true; return; }
+
+    const s = new Float32Array(SAMPLE_LEN);
+    for (let i = 0; i < snakes.length; i++) {
+      const sn = snakes[i], o = i * SNAKE_STRIDE;
+      s[o] = sn.head.x; s[o + 1] = sn.head.y; s[o + 2] = sn.head.z;
+      s[o + 3] = sn.dir.x; s[o + 4] = sn.dir.y; s[o + 5] = sn.dir.z;
+      s[o + 6] = sn.bodyLen;
+      s[o + 7] = sn.alive ? 1 : 0;
+    }
+    for (let i = 0; i < foods.length; i++) {
+      const o = FOOD_OFF + i * 3, p = foods[i].pos;
+      s[o] = p.x; s[o + 1] = p.y; s[o + 2] = p.z;
+    }
+    rec.times.push(rec.t);
+    rec.blobs.push(s);
+
+    // after death the window grows by the tail instead of sliding
+    const cutoff = rec.dying ? rec.deathT - REPLAY_SECONDS : rec.t - REPLAY_SECONDS;
+    while (rec.times.length > 1 && rec.times[0] < cutoff) {
+      rec.times.shift();
+      rec.blobs.shift();
+    }
+  }
+
+  function clearRecording() {
+    rec.t = 0;
+    rec.times.length = 0;
+    rec.blobs.length = 0;
+    rec.dying = false;
+    rec.deathT = 0;
+    rec.frozen = false;
+  }
+
+  // --- the replay lives in its own scene so the live game keeps running ------
+  const replayScene = new THREE.Scene();
+  replayScene.background = new THREE.Color(COLOR.bg);
+  replayScene.fog = new THREE.Fog(COLOR.bg, 40, 150);
+  replayScene.add(new THREE.HemisphereLight(0xbfe8ff, 0x0a1420, 0.9));
+  {
+    const dl = new THREE.DirectionalLight(0xffffff, 0.7);
+    dl.position.set(20, 60, 10);
+    replayScene.add(dl);
+
+    replayScene.add(new THREE.GridHelper(Math.max(AX, AZ) * 2, Math.max(AX, AZ) * 2, COLOR.gridMajor, COLOR.grid));
+
+    const fl = new THREE.Mesh(
+      new THREE.PlaneGeometry(AX * 2, AZ * 2),
+      new THREE.MeshBasicMaterial({ color: 0x071019, transparent: true, opacity: 0.55, side: THREE.DoubleSide })
+    );
+    fl.rotation.x = -Math.PI / 2;
+    fl.position.y = -0.02;
+    replayScene.add(fl);
+
+    const wf = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(AX * 2, AY, AZ * 2)),
+      new THREE.LineBasicMaterial({ color: COLOR.wall, transparent: true, opacity: 0.5 })
+    );
+    wf.position.y = AY / 2;
+    replayScene.add(wf);
+
+    // Faint glass panels (no live reflections here) so the arena reads as a box
+    const glassMat = new THREE.MeshBasicMaterial({
+      color: 0x123a52, transparent: true, opacity: 0.24,
+      side: THREE.DoubleSide, depthWrite: false,
+    });
+    for (const def of wallDefs) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(def.w, def.h), glassMat);
+      orientWall(m, def);
+      replayScene.add(m);
+    }
+
+    // ...and the same dust field for depth perception
+    const n = 900;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      pos[i * 3 + 0] = (Math.random() - 0.5) * AX * 2;
+      pos[i * 3 + 1] = Math.random() * AY;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * AZ * 2;
+    }
+    const sg = new THREE.BufferGeometry();
+    sg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    replayScene.add(new THREE.Points(sg, new THREE.PointsMaterial({
+      color: 0x9fd8ff, size: 0.12, transparent: true, opacity: 0.5, sizeAttenuation: true,
+    })));
+  }
+
+  // Ghost snakes: prototype-shared with Snake so initPath/recordPath/layoutBody
+  // rebuild the bodies exactly as they looked, but with meshes in the replay
+  // scene (and the same per-segment materials, so colours match).
+  const ghosts = snakes.map((src) => {
+    const g = Object.create(Snake.prototype);
+    g.name = src.name;
+    g.colors = src.colors;
+    g.isPlayer = src.isPlayer;
+    g.head = new THREE.Vector3();
+    g.dir = new THREE.Vector3(0, 0, -1);
+    g.desired = new THREE.Vector3();
+    g.yaw = 0; g.pitch = 0;
+    g.bodyLen = CFG.startLen; g.speed = CFG.baseSpeed; g.turnRate = 0;
+    g.score = 0; g.alive = true; g.respawnTimer = 0; g.steerTimer = 0;
+    g.path = []; g.segs = [];
+    g._euler = new THREE.Euler(0, 0, 0, "YXZ");
+    for (let i = 0; i < CFG.maxLen; i++) {
+      const m = new THREE.Mesh(i === 0 ? headGeo : segGeo, src.segs[i].material);
+      m.visible = false;
+      replayScene.add(m);
+      g.segs.push(m);
+    }
+    return g;
+  });
+
+  const ghostFoods = [];
+  {
+    const geo = new THREE.SphereGeometry(0.8, 16, 12);
+    const mat = new THREE.MeshStandardMaterial({ color: COLOR.food, emissive: COLOR.food, emissiveIntensity: 0.9, roughness: 0.3 });
+    for (let i = 0; i < foods.length; i++) {
+      const m = new THREE.Mesh(geo, mat);
+      replayScene.add(m);
+      ghostFoods.push(m);
+    }
+  }
+
+  const ghostDebris = [];
+  {
+    const geo = new THREE.SphereGeometry(0.62, 12, 10);
+    for (let i = 0; i < DEBRIS_MAX; i++) {
+      const m = new THREE.Mesh(geo, debris[0].mesh.material);
+      m.visible = false;
+      replayScene.add(m);
+      ghostDebris.push({
+        mesh: m, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+        active: false, age: 0, phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  const replayCam = new THREE.PerspectiveCamera(66, 16 / 9, 0.1, 500);
+
+  const replay = {
+    open: false, elapsed: 0, t0: 0, dur: 0, cursor: 0, inited: false,
+    exploded: false, explodeT: -1, wideAngle: 0,
+    blastPos: new THREE.Vector3(),
+    prevAlive: [], hasHead: [], prevHead: [],
+    camPos: new THREE.Vector3(), camLook: new THREE.Vector3(),
+  };
+  for (let i = 0; i < snakes.length; i++) {
+    replay.prevAlive.push(false);
+    replay.hasHead.push(false);
+    replay.prevHead.push(new THREE.Vector3());
+  }
+
+  const _rv = new THREE.Vector3();
+  const _chaseT = new THREE.Vector3();
+  const _lookT = new THREE.Vector3();
+  const _wideT = new THREE.Vector3();
+  const _wideLook = new THREE.Vector3();
+  const _dcLook = new THREE.Vector3();
+  const arenaCentre = new THREE.Vector3(0, AY * 0.45, 0);
+
+  const easeInOutCubic = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const easeOutCubic = (x) => 1 - Math.pow(1 - x, 3);
+
+  function clampInside(v) {
+    v.x = Math.max(-AX + 1.5, Math.min(AX - 1.5, v.x));
+    v.y = Math.max(1, Math.min(AY - 1.5, v.y));
+    v.z = Math.max(-AZ + 1.5, Math.min(AZ - 1.5, v.z));
+    return v;
+  }
+
+  // slow cinematic pull-back used from the moment the player dies
+  const deathCam = { origin: new THREE.Vector3(), t: 0, angle: 0 };
+  function updateDeathCam(dt) {
+    deathCam.t += dt;
+    const e = easeOutCubic(Math.min(deathCam.t / 10, 1));
+    _dcLook.copy(deathCam.origin).lerp(arenaCentre, e);
+    const radius = 5 + e * 52;
+    const height = 2.5 + e * 24;
+    const a = deathCam.angle + deathCam.t * 0.055;
+    camera.position.set(
+      _dcLook.x + Math.cos(a) * radius,
+      _dcLook.y + height,
+      _dcLook.z + Math.sin(a) * radius
+    );
+    clampInside(camera.position);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(_dcLook);
+  }
+
+  const rmViewEl = document.getElementById("rmView");
+
+  function canReplay() {
+    const n = rec.times.length;
+    const span = n ? rec.times[n - 1] - rec.times[0] : 0;
+    return n >= 5 && span >= 1.2;
+  }
+
+  function beginReplayPlayback() {
+    const n = rec.times.length;
+    replay.t0 = rec.times[0];
+    replay.dur = n ? rec.times[n - 1] - rec.times[0] : 0;
+    replay.elapsed = 0;
+    replay.cursor = 0;
+    replay.inited = false;
+    replay.exploded = false;
+    replay.explodeT = -1;
+    for (let i = 0; i < ghosts.length; i++) {
+      replay.prevAlive[i] = false;
+      replay.hasHead[i] = false;
+      const g = ghosts[i];
+      g.alive = false;
+      for (let k = 0; k < CFG.maxLen; k++) g.segs[k].visible = false;
+    }
+    resetPool(ghostDebris);
+    if (ui.replayFill) ui.replayFill.style.width = "0%";
+  }
+
+  function openReplay() {
+    if (state.mode !== "dead" || !canReplay()) return;
+    beginReplayPlayback();
+    replay.open = true;
+    ui.replayModal.classList.remove("hidden");
+    ui.over.classList.add("hidden");
+    for (const el of cornerEls) el.style.display = "none";
+  }
+
+  function closeReplay() {
+    if (!replay.open) return;
+    replay.open = false;
+    ui.replayModal.classList.add("hidden");
+    resetPool(ghostDebris);
+    if (state.mode === "dead") {
+      ui.over.classList.remove("hidden");
+      layoutCornerFrames();
+      for (const el of cornerEls) el.style.display = "block";
+    }
+  }
+
+  function stepReplay(dt) {
+    if (!rec.times.length) return;
+    replay.elapsed += dt;
+    if (replay.elapsed >= replay.dur + REPLAY_HOLD) { beginReplayPlayback(); return; }
+
+    const target = replay.t0 + Math.min(replay.elapsed, replay.dur);
+    const times = rec.times, blobs = rec.blobs;
+    let i = replay.cursor;
+    while (i + 1 < times.length && times[i + 1] < target) i++;
+    replay.cursor = i;
+    const j = Math.min(i + 1, times.length - 1);
+    const ta = times[i], tb = times[j];
+    let f = 0;
+    if (tb > ta) { f = (target - ta) / (tb - ta); f = f < 0 ? 0 : f > 1 ? 1 : f; }
+    const A = blobs[i], B = blobs[j];
+
+    for (let s = 0; s < snakes.length; s++) {
+      const g = ghosts[s], o = s * SNAKE_STRIDE;
+
+      if (!(A[o + 7] > 0.5)) {                 // dead in the recording
+        // The instant the player dies, burst the ghost body into coloured orbs
+        // — the same blast the live arena performed.
+        if (s === 0 && !replay.exploded && replay.prevAlive[0] && g.alive) {
+          explodeBody(g.segs, g.bodyLen, ghostDebris);
+          replay.blastPos.copy(_blastC);
+          replay.exploded = true;
+          replay.explodeT = replay.elapsed;
+          replay.wideAngle = Math.atan2(
+            replay.camPos.z - _blastC.z, replay.camPos.x - _blastC.x
+          );
+        }
+        if (g.alive) {
+          g.alive = false;
+          for (let k = 0; k < CFG.maxLen; k++) g.segs[k].visible = false;
+        }
+        replay.prevAlive[s] = false;
+        continue;
+      }
+
+      const hx = A[o] + (B[o] - A[o]) * f;
+      const hy = A[o + 1] + (B[o + 1] - A[o + 1]) * f;
+      const hz = A[o + 2] + (B[o + 2] - A[o + 2]) * f;
+      const len = Math.round(A[o + 6] + (B[o + 6] - A[o + 6]) * f);
+
+      _rv.set(B[o + 3], B[o + 4], B[o + 5]);
+      if (_rv.lengthSq() < 1e-6) _rv.set(0, 0, -1); else _rv.normalize();
+
+      // a gap or a revival means the snake respawned — rebuild its tail
+      const jump = replay.hasHead[s]
+        ? replay.prevHead[s].distanceToSquared(_chaseT.set(hx, hy, hz))
+        : Infinity;
+      const needInit = !replay.prevAlive[s] || !replay.hasHead[s] || jump > 9;
+
+      g.alive = true;
+      g.bodyLen = Math.max(2, len);
+      g.dir.copy(_rv);
+      g.head.set(hx, hy, hz);
+      replay.prevHead[s].copy(g.head);
+      replay.hasHead[s] = true;
+      replay.prevAlive[s] = true;
+
+      if (needInit) g.initPath();
+      else g.recordPath();
+      g.layoutBody();
+    }
+
+    for (let k = 0; k < ghostFoods.length; k++) {
+      const o = FOOD_OFF + k * 3;
+      ghostFoods[k].position.set(
+        A[o] + (B[o] - A[o]) * f,
+        A[o + 1] + (B[o + 1] - A[o + 1]) * f,
+        A[o + 2] + (B[o + 2] - A[o + 2]) * f
+      );
+    }
+
+    updatePool(ghostDebris, dt, replay.elapsed);
+    updateReplayCam(dt);
+
+    // keep the lens clear of orbs that are practically touching it
+    cullNearCamera(ghostDebris, replayCam.position, 7.84);
+    for (const m of ghostFoods) {
+      m.visible = m.position.distanceToSquared(replayCam.position) > 7.84;
+    }
+
+    if (ui.replayFill) {
+      ui.replayFill.style.width = Math.min(100, (replay.elapsed / replay.dur) * 100) + "%";
+    }
+  }
+
+  function updateReplayCam(dt) {
+    const g = ghosts[0];   // the player's ghost
+
+    // chase rig: behind the body, rising with length
+    const bodyDist = Math.min(g.bodyLen * CFG.spacing, CHASE.maxBody);
+    const back = CHASE.minBack + bodyDist * CHASE.backPerLen;
+    const up = CHASE.baseUp + bodyDist * CHASE.upPerLen;
+    _chaseT.copy(g.head).addScaledVector(g.dir, -back);
+    _chaseT.y += up;
+    clampInside(_chaseT);
+
+    _lookT.copy(g.head).addScaledVector(g.dir, CHASE.look);
+    _lookT.y += CHASE.lookUp;
+
+    // after the blast the camera eases back and up into a wide shot
+    let w = 0;
+    if (replay.exploded) {
+      const zt = replay.elapsed - replay.explodeT - ZOOM_DELAY;
+      if (zt > 0) w = easeInOutCubic(Math.min(zt / ZOOM_SECONDS, 1));
+    }
+    if (w > 0.0001) {
+      const a = replay.wideAngle + Math.max(0, replay.elapsed - replay.explodeT) * 0.05;
+      _wideT.set(
+        replay.blastPos.x + Math.cos(a) * WIDE.r,
+        replay.blastPos.y + WIDE.up,
+        replay.blastPos.z + Math.sin(a) * WIDE.r
+      );
+      clampInside(_wideT);
+      _chaseT.lerp(_wideT, w);
+      _wideLook.copy(replay.blastPos).lerp(arenaCentre, w * 0.35);
+      _wideLook.y += 2;
+      _lookT.lerp(_wideLook, w);
+    }
+
+    if (!replay.inited) {
+      replay.camPos.copy(_chaseT);
+      replay.camLook.copy(_lookT);
+      replay.inited = true;
+    } else {
+      const k = 1 - Math.pow(0.0001, dt);   // framerate-independent follow
+      replay.camPos.lerp(_chaseT, k);
+      replay.camLook.lerp(_lookT, k);
+    }
+    replayCam.position.copy(replay.camPos);
+    replayCam.lookAt(replay.camLook);
+  }
+
+  // Scissor the replay scene into the modal's view rectangle — everything
+  // outside it is dimmed by the modal chrome, so it reads as a window.
+  function renderReplayView() {
+    const r = rmViewEl.getBoundingClientRect();
+    if (r.width < 8 || r.height < 8) return;
+    const glY = window.innerHeight - (r.top + r.height);
+    replayCam.aspect = r.width / r.height;
+    replayCam.updateProjectionMatrix();
+    renderer.setScissorTest(true);
+    renderer.setViewport(r.left, glY, r.width, r.height);
+    renderer.setScissor(r.left, glY, r.width, r.height);
+    renderer.render(replayScene, replayCam);
+    renderer.setScissorTest(false);
   }
 
   // ------------------------------------------------------------------
@@ -984,22 +1777,33 @@
     audio();
     requestLock();
   });
-  ui.over.addEventListener("click", () => {
+  document.getElementById("retryBtn").addEventListener("click", () => {
     audio();
     resetGame();
     requestLock();
   });
+  document.getElementById("watchReplay").addEventListener("click", () => {
+    audio();
+    openReplay();
+  });
+  document.getElementById("replayClose").addEventListener("click", closeReplay);
 
   document.addEventListener("pointerlockchange", () => {
     const locked = document.pointerLockElement === renderer.domElement;
     if (locked) {
       if (state.mode === "ready") resetGame();
       // Locking resumes the game from any non-playing state — including the
-      // retry-after-crash flow, which re-locks while mode is still "over".
+      // play-again flow, which re-locks while mode is still "dead".
+      closeReplay();
       if (state.mode !== "playing") setMode("playing");
     } else {
       if (state.mode === "playing") setMode("paused");
     }
+  });
+
+  // Esc closes the replay modal; nothing else steals keys from the arena
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && replay.open) closeReplay();
   });
 
   // ------------------------------------------------------------------
@@ -1024,6 +1828,8 @@
       // camera follows head
       camera.position.copy(player.head);
       camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
+      playerHead.position.copy(player.head);
+      playerHead.visible = player.alive;
 
       // subtle FOV sense of speed
       const targetFov = 78 + (curSpeed - CFG.baseSpeed) * 0.9;
@@ -1036,8 +1842,33 @@
       // --- orbs ---
       eatAll();
 
-      // --- player death ---
-      if (hitWalls(player.head) || hitBodies(player)) gameOver();
+      // --- record the frame, then check for death ---
+      rec.t += dt;
+      recordFrame();
+      if (hitWalls(player.head) || hitBodies(player)) playerDied();
+
+      hudTimer -= dt;
+      if (hudTimer <= 0) {
+        hudTimer = 0.15;
+        updateHUD();
+        updateRivalsHUD();
+      }
+    } else if (state.mode === "dead") {
+      // The arena plays on without us: rivals keep hunting, respawning and
+      // eating the wreckage until the next game is started. The tape keeps
+      // rolling for a beat so the replay captures the blast and its aftermath.
+      for (const s of cpus) updateCPU(s, dt);
+      eatAll();
+      updatePool(debris, dt, now / 1000);
+      if (!rec.frozen) {
+        rec.t += dt;
+        recordFrame();
+      }
+
+      updateDeathCam(dt);
+
+      state.deathT += dt;
+      if (state.deathT > 1.15) ui.over.classList.add("show");
 
       hudTimer -= dt;
       if (hudTimer <= 0) {
@@ -1055,13 +1886,32 @@
       f.mesh.rotation.y += dt * 0.8;
     }
 
+    // keep the lens clear of orbs that are practically touching it
+    cullNearCamera(debris, camera.position, 7.84);
+
+    // --- main viewport (the live arena) ---
+    renderer.setScissorTest(false);
+    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    renderer.setScissor(0, 0, window.innerWidth, window.innerHeight);
     renderer.render(scene, camera);
+
+    // --- corner spectator windows ---
+    if ((state.mode === "playing" || state.mode === "dead") && !replay.open) {
+      renderCornerViews();
+    }
+
+    // --- replay modal ---
+    if (replay.open) {
+      stepReplay(dt);
+      renderReplayView();
+    }
   }
 
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+    layoutCornerFrames();
   });
 
   // init
