@@ -287,6 +287,20 @@
   .mpPing { min-height: 14px; text-align: center; font-size: 11px; letter-spacing: 1px; opacity: .75; }
   .mpPing b { color: var(--accent); }
 
+  /* ---------- autopilot debug strip ---------- */
+  #mpAuto {
+    position: fixed; left: 50%; bottom: 52px; transform: translateX(-50%);
+    z-index: 6; padding: 7px 16px; border-radius: 999px;
+    border: 1px solid rgba(255,209,102,.4);
+    background: rgba(30,20,5,.72);
+    backdrop-filter: blur(6px);
+    color: var(--accent-2);
+    font-size: 11px; font-weight: 700; letter-spacing: 1.6px; text-transform: uppercase;
+    white-space: nowrap; pointer-events: none; user-select: none;
+    text-shadow: 0 1px 6px #000;
+  }
+  #mpAuto.hidden { display: none; }
+
   /* ---------- 30 s reconnect window ---------- */
   #reconnect {
     position: fixed; inset: 0; z-index: 11;
@@ -399,6 +413,8 @@
   <span>Ping</span><span class="mhval" id="mpHudPing">—</span>
   <span class="mhmode" id="mpHudMode">P2P</span>
 </div>
+
+<div id="mpAuto" class="hidden"></div>
 
 <div id="reconnect" class="hidden">
   <div class="retitle" id="reconnectTitle">RECONNECTING</div>
@@ -1663,6 +1679,24 @@
     }
   }
 
+  // Autopilot debug mode: drive a human snake with the same brain as the CPU
+  // rivals. Death/respawn stays on the human rules; the caller handles collisions.
+  function updateAutopilot(s, dt) {
+    if (!s.alive) return;
+    if (!(s.turnRate > 0)) s.turnRate = CFG.cpu.turnRate;
+    s.steerTimer -= dt;
+    if (s.steerTimer <= 0) {
+      steerCPU(s);
+      s.steerTimer = CFG.cpu.steerEvery * (0.75 + Math.random() * 0.5);
+    }
+    _panic.copy(s.head).addScaledVector(s.dir, 1.4);
+    if (clearance(_panic, s) < 0.7) {
+      steerCPU(s);
+      s.steerTimer = 0.12;
+    }
+    s.move(dt, s.desired);
+  }
+
   // ------------------------------------------------------------------
   // Corner spectator windows
   // Four fixed cameras sit in the four bottom corners of the arena, each
@@ -1804,6 +1838,7 @@
     mpHud: document.getElementById("mpHud"),
     mpHudPing: document.getElementById("mpHudPing"),
     mpHudMode: document.getElementById("mpHudMode"),
+    mpAuto: document.getElementById("mpAuto"),
     reconnect: document.getElementById("reconnect"),
     reconnectTitle: document.getElementById("reconnectTitle"),
     reconnectSub: document.getElementById("reconnectSub"),
@@ -1831,6 +1866,8 @@
     inputSeq: 0, lastSnapSent: 0, lastInputSent: 0,
     snaps: [],
     hostName: "YOU", guestName: "GUEST",
+    // autopilot debug mode (?mp_autopilot=1): the flagged client's snake is AI-driven
+    hostAuto: false, guestAuto: false,
     // ping diagnostics (measured over the game channel)
     ping: null, pingSamples: [], pingSent: new Map(),
     pingSeq: 0, nextPingAt: 0, pingBurst: 0,
@@ -1841,6 +1878,7 @@
   const MP_RECONNECT_MS = 30000;
   const MP_SESSION_KEY = "snake3d.session.v1";
   const MP_PING_BURST = 5;
+  const MP_AUTOPILOT = new URLSearchParams(location.search).get("mp_autopilot") === "1";
   let countdownT = 0;
   const pendingIce = [];
 
@@ -2055,6 +2093,7 @@
   }
 
   function mpRenderPing() {
+    mpRenderAuto();
     // lobby readout (both players see the same measurement)
     if (net.active && net.connected && state.mode === "mp") {
       const peer = net.role === "guest" ? "host" : "guest";
@@ -2073,6 +2112,21 @@
     const p = net.ping;
     ui.mpHud.classList.toggle("mid", p !== null && p >= 80 && p < 160);
     ui.mpHud.classList.toggle("bad", p !== null && p >= 160);
+  }
+
+  // Debug autopilot: both screens see who is being driven by the bot brain.
+  function mpRenderAuto() {
+    if (!ui.mpAuto) return;
+    const mine = net.role === "host" ? net.hostAuto : net.guestAuto;
+    const peer = net.role === "host" ? net.guestAuto : net.hostAuto;
+    const live = net.active && (mine || peer) &&
+      (state.mode === "mp" || state.mode === "playing" || state.mode === "countdown" || net.reconnecting);
+    let text = "";
+    if (mine && peer) text = "AUTOPILOT · BOTH SNAKES";
+    else if (mine) text = "AUTOPILOT · YOUR SNAKE";
+    else if (peer) text = "AUTOPILOT · OPPONENT";
+    ui.mpAuto.textContent = text;
+    ui.mpAuto.classList.toggle("hidden", !live || !text);
   }
 
   // --- session persistence + 30 s reconnect window ----------------------
@@ -2126,6 +2180,7 @@
       hostName: net.hostName,
       guestName: net.guestName,
       bots: net.bots,
+      auto: { host: net.hostAuto, guest: net.guestAuto },
       cfg: net.cfg,
       left: Math.round(net.reconnecting ? net.pauseLeft : Math.max(0, net.matchEnd - performance.now())),
       countdown: state.mode === "countdown" ? Math.max(0, countdownT) : 0,
@@ -2203,7 +2258,7 @@
       net.lastSnapSent = 0;
       net.lastInputSent = 0;
       if (state.mode !== "playing") setMode("playing");
-      if (document.pointerLockElement !== renderer.domElement) {
+      if (!MP_AUTOPILOT && document.pointerLockElement !== renderer.domElement) {
         ui.mpResume.classList.remove("hidden");
       }
     }
@@ -2241,6 +2296,12 @@
     net.hostName = s.hostName || "YOU";
     net.guestName = s.guestName || "GUEST";
     net.bots = s.bots || 0;
+    net.hostAuto = !!(s.auto && s.auto.host);
+    net.guestAuto = !!(s.auto && s.auto.guest);
+    if (MP_AUTOPILOT) {
+      if (net.role === "host") net.hostAuto = true;
+      else net.guestAuto = true;
+    }
     net.cfg = s.cfg;
     net.duration = (s.cfg && s.cfg.duration) || CFG.mp.duration;
     net.snaps.length = 0;
@@ -2269,6 +2330,9 @@
     foodCount = foodFor(n);
     setupVersus(cfg);
     resetGame();
+    // human snakes driven by the bot brain need a CPU turn rate (reset() zeroed it)
+    if (net.hostAuto && player) player.turnRate = CFG.cpu.turnRate;
+    if (net.guestAuto && remote) remote.turnRate = CFG.cpu.turnRate;
     ui.mp.classList.add("hidden");
     ui.start.classList.add("hidden");
     ui.results.classList.add("hidden");
@@ -2438,6 +2502,7 @@
     ui.mpJoinRow.classList.add("hidden");
     ui.mpAction.textContent = role === "host" ? "Start match" : "Ready up";
     ui.mpAction.disabled = true;
+    mpRenderAuto();
   }
 
   function mpHideLobby() {
@@ -2456,6 +2521,8 @@
     net.hostName = name;
     net.guestName = "GUEST";
     net.bots = bots;
+    net.hostAuto = MP_AUTOPILOT;
+    net.guestAuto = false;
     net.active = true;
     net.connected = false;
     net.relay = false;
@@ -2491,6 +2558,8 @@
     const name = (document.getElementById("mpName").value || "YOU").trim().slice(0, 12) || "YOU";
     net.role = "guest";
     net.guestName = name;
+    net.guestAuto = MP_AUTOPILOT;
+    net.hostAuto = false;
     net.active = true;
     net.connected = false;
     net.relay = false;
@@ -2676,7 +2745,7 @@
         ui.mpAction.textContent = "Start match";
       }
     } else {
-      mpSendGame({ c: "hello", name: net.guestName, rejoin: !!net.reconnecting });
+      mpSendGame({ c: "hello", name: net.guestName, rejoin: !!net.reconnecting, auto: MP_AUTOPILOT });
     }
     mpRenderPing();
     mpSaveSession();
@@ -2696,7 +2765,9 @@
       case "hello":
         if (net.role === "host") {
           net.guestName = String(msg.name || "GUEST").slice(0, 12);
+          net.guestAuto = !!msg.auto;
           net.peerPresent = true;
+          mpSendGame({ c: "auto", host: net.hostAuto, guest: net.guestAuto });
           if (net.reconnecting && net.cfg && (net.matchRunning || state.mode === "countdown")) {
             const countdown = state.mode === "countdown" ? Math.max(0, countdownT) : 0;
             mpSendGame({
@@ -2705,10 +2776,33 @@
               left: Math.round(net.pauseLeft),
               countdown,
               look: [round3(net.remoteInput.yaw), round3(net.remoteInput.pitch)],
+              auto: { host: net.hostAuto, guest: net.guestAuto },
             });
             net.resumeSent = true;
             mpStatus("Opponent is back — resuming…");
+          } else if (!net.reconnecting && !net.matchRunning && net.hostAuto) {
+            // autopilot host: no human is there to press Start match
+            const cfg = {
+              hostName: net.hostName,
+              guestName: net.guestName,
+              bots: net.bots,
+              duration: CFG.mp.duration,
+            };
+            net.cfg = cfg;
+            mpSendGame({ c: "config", cfg, auto: { host: net.hostAuto, guest: net.guestAuto } });
+            mpStatus("Autopilot host — waiting for ready…");
+            ui.mpAction.disabled = true;
           }
+          mpRenderAuto();
+          mpSaveSession();
+        }
+        break;
+      case "auto":
+        if (net.role === "guest") {
+          net.hostAuto = !!msg.host;
+          net.guestAuto = !!msg.guest;
+          mpRenderAuto();
+          mpSaveSession();
         }
         break;
       case "config":
@@ -2716,20 +2810,35 @@
           net.cfg = msg.cfg;
           net.duration = msg.cfg.duration;
           net.bots = msg.cfg.bots;
-          mpStatus("Opponent ready — click Ready up");
-          ui.mpAction.textContent = "Ready up";
-          ui.mpAction.disabled = false;
+          if (msg.auto) {
+            net.hostAuto = !!msg.auto.host;
+            net.guestAuto = !!msg.auto.guest;
+          }
+          mpRenderAuto();
+          if (MP_AUTOPILOT && !net.reconnecting) {
+            mpStatus("Autopilot — readying up…");
+            ui.mpAction.disabled = true;
+            setTimeout(mpAutoReady, 350);
+          } else {
+            mpStatus("Opponent ready — click Ready up");
+            ui.mpAction.textContent = "Ready up";
+            ui.mpAction.disabled = false;
+          }
         }
         break;
       case "ready":
-        if (net.role === "host" && !net.matchRunning && !net.reconnecting) {
-          mpSendGame({ c: "go", cfg: net.cfg });
+        if (net.role === "host" && !net.matchRunning && !net.reconnecting && state.mode !== "countdown") {
+          mpSendGame({ c: "go", cfg: net.cfg, auto: { host: net.hostAuto, guest: net.guestAuto } });
           mpStartMatch(net.cfg, "host");
         }
         break;
       case "go":
         if (net.role === "guest") {
           net.cfg = msg.cfg;
+          if (msg.auto) {
+            net.hostAuto = !!msg.auto.host;
+            net.guestAuto = !!msg.auto.guest;
+          }
           mpStartMatch(msg.cfg, "guest");
         }
         break;
@@ -2769,6 +2878,10 @@
       }
       case "resume":
         if (net.role === "guest" && net.reconnecting && msg.cfg) {
+          if (msg.auto) {
+            net.hostAuto = !!msg.auto.host;
+            net.guestAuto = !!msg.auto.guest;
+          }
           const inScene = net.cfg && (state.mode === "playing" || state.mode === "countdown");
           if (!inScene) {
             mpRestoreGuestWorld(msg.cfg, msg.left, msg.countdown, msg.look);
@@ -2833,6 +2946,18 @@
     mpSendGame({ c: "snap", t: Math.round(now), s, f, pu, mn });
   }
 
+  // Autopilot guests cannot press "Ready up": nudge the host as soon as the
+  // session is actually connected (the connection may still be settling when
+  // the config arrives, especially on the relay fallback).
+  function mpAutoReady() {
+    if (!MP_AUTOPILOT || !net.active || net.role !== "guest") return;
+    if (net.matchRunning || net.reconnecting) return;
+    if (state.mode === "playing" || state.mode === "countdown") return;
+    if (!net.cfg) return;
+    if (!net.connected) { setTimeout(mpAutoReady, 250); return; }
+    mpSendGame({ c: "ready" });
+  }
+
   function mpStartMatch(cfg, role) {
     cfg = { ...cfg, role };
     net.cfg = cfg;
@@ -2848,7 +2973,15 @@
     applyArena(a.ax, a.az);
     foodCount = foodFor(n);
     setupVersus(cfg);
+    // autopilot debug clients: let the bot brain steer those human snakes
+    if (role === "host") {
+      net.hostAuto = MP_AUTOPILOT || net.hostAuto;
+    } else {
+      net.guestAuto = MP_AUTOPILOT || net.guestAuto;
+    }
     resetGame();
+    if (net.hostAuto && player) player.turnRate = CFG.cpu.turnRate;
+    if (net.guestAuto && remote) remote.turnRate = CFG.cpu.turnRate;
     net.snaps.length = 0;
     ui.mp.classList.add("hidden");
     ui.start.classList.add("hidden");
@@ -2963,6 +3096,8 @@
     net.connected = false;
     net.relay = false;
     net.peerPresent = false;
+    net.hostAuto = false;
+    net.guestAuto = false;
     net.reconnecting = false;
     net.reconnectDeadline = 0;
     net.pauseLeft = 0;
@@ -2990,6 +3125,7 @@
   }
 
   function requestFire() {
+    if (MP_AUTOPILOT && net.active) return;
     if (!player.alive || player.mines <= 0 || player.fireCd > 0) return;
     if (net.active && net.role === "guest") {
       // optimistic local feedback; the host owns the real mine
@@ -3007,8 +3143,8 @@
   const _rv2 = new THREE.Vector3();
 
   function mpGuestFrame(dt, now) {
-    // send our heading/boost to the host
-    if (now - net.lastInputSent >= 1000 / CFG.mp.inputHz) {
+    // send our heading/boost to the host (autopilot is steered by the host)
+    if (!MP_AUTOPILOT && now - net.lastInputSent >= 1000 / CFG.mp.inputHz) {
       net.lastInputSent = now;
       mpSendGame({
         c: "input",
@@ -3144,6 +3280,13 @@
     updatePool(debris, dt, time);
     updateWaves(shockwaves, dt);
 
+    // Autopilot guest: aim the camera down the snake's heading instead of
+    // leaving it wherever the mouse last pointed.
+    if (MP_AUTOPILOT && player.alive) {
+      player.yaw = Math.atan2(-player.dir.x, -player.dir.z);
+      player.pitch = Math.asin(Math.max(-1, Math.min(1, player.dir.y)));
+    }
+
     if (player.alive) {
       camera.position.copy(player.head);
       camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
@@ -3170,11 +3313,15 @@
       if (remote.respawnTimer <= 0) respawnRemote();
       return;
     }
-    remote.yaw = net.remoteInput.yaw;
-    remote.pitch = net.remoteInput.pitch;
-    remote.syncDir();
-    const spd = net.remoteInput.boost ? CFG.boostSpeed : remote.speed;
-    remote.move(dt, null, spd);
+    if (net.guestAuto) {
+      updateAutopilot(remote, dt);
+    } else {
+      remote.yaw = net.remoteInput.yaw;
+      remote.pitch = net.remoteInput.pitch;
+      remote.syncDir();
+      const spd = net.remoteInput.boost ? CFG.boostSpeed : remote.speed;
+      remote.move(dt, null, spd);
+    }
     const wall = wallHitName(remote.head);
     const body = wall ? null : bodyHitName(remote);
     if (wall || body) remoteDied(remote, wall || body);
@@ -3961,12 +4108,12 @@
         duration: CFG.mp.duration,
       };
       net.cfg = cfg;
-      requestLock();
-      mpSendGame({ c: "config", cfg });
+      if (!MP_AUTOPILOT) requestLock();
+      mpSendGame({ c: "config", cfg, auto: { host: net.hostAuto, guest: net.guestAuto } });
       mpStatus("Waiting for opponent to ready up…");
       ui.mpAction.disabled = true;
     } else if (net.role === "guest") {
-      requestLock();
+      if (!MP_AUTOPILOT) requestLock();
       mpSendGame({ c: "ready" });
       mpStatus("Waiting for host…");
       ui.mpAction.disabled = true;
@@ -4025,7 +4172,7 @@
     } else {
       if (net.active) {
         // the match keeps running; just prompt for the pointer back
-        if (state.mode === "playing") ui.mpResume.classList.remove("hidden");
+        if (state.mode === "playing" && !MP_AUTOPILOT) ui.mpResume.classList.remove("hidden");
       } else if (state.mode === "playing") {
         setMode("paused");
       }
@@ -4089,7 +4236,7 @@
         updateHUD();
         updateRivalsHUD();
         mpSaveSession();
-        if (net.active && document.pointerLockElement !== renderer.domElement) {
+        if (net.active && !MP_AUTOPILOT && document.pointerLockElement !== renderer.domElement) {
           ui.mpResume.classList.remove("hidden");
         }
       }
@@ -4101,9 +4248,17 @@
       } else {
         // --- solo or host: local authoritative sim ---
         if (player.alive) {
-          player.syncDir();
-          const curSpeed = (boostKey || boostMouse) ? CFG.boostSpeed : player.speed;
-          player.move(dt, null, curSpeed);
+          const isAuto = net.active && net.hostAuto;
+          let curSpeed = player.speed;
+          if (isAuto) {
+            updateAutopilot(player, dt);
+            player.yaw = Math.atan2(-player.dir.x, -player.dir.z);
+            player.pitch = Math.asin(Math.max(-1, Math.min(1, player.dir.y)));
+          } else {
+            player.syncDir();
+            curSpeed = (boostKey || boostMouse) ? CFG.boostSpeed : player.speed;
+            player.move(dt, null, curSpeed);
+          }
           camera.position.copy(player.head);
           camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
           playerHead.position.copy(player.head);
@@ -4240,6 +4395,10 @@
     setMode("mp");
     document.getElementById("mpCode").value = joinCode.toUpperCase();
     setTimeout(() => { if (!net.active) mpJoinGame(); }, 400);
+  } else if (MP_AUTOPILOT && !net.active) {
+    // debug autopilot without a join code: go straight to the multiplayer screen
+    setMode("mp");
+    mpStatus("Autopilot debug mode — this snake is driven by the bot brain");
   }
 
   requestAnimationFrame(frame);
