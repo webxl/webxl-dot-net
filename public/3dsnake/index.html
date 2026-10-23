@@ -261,6 +261,49 @@
   #mpResume.hidden { display: none; }
   #mpResume .rsub { font-size: 13px; font-weight: 400; letter-spacing: 1px; opacity: .7; }
 
+  /* ---------- multiplayer ping / connection strip ---------- */
+  #mpHud {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+    z-index: 6; display: flex; align-items: center; gap: 9px;
+    padding: 7px 16px; border-radius: 999px;
+    border: 1px solid rgba(127,212,255,.22);
+    background: rgba(8,12,22,.66);
+    backdrop-filter: blur(6px);
+    font-size: 11px; letter-spacing: 1.6px; text-transform: uppercase;
+    white-space: nowrap; pointer-events: none; user-select: none;
+    text-shadow: 0 1px 6px #000;
+  }
+  #mpHud.hidden { display: none; }
+  #mpHud .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+  }
+  #mpHud .mhval { color: var(--accent); font-weight: 700; min-width: 52px; text-align: right; }
+  #mpHud .mhmode { opacity: .5; }
+  #mpHud.mid .dot { background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
+  #mpHud.mid .mhval { color: var(--accent-2); }
+  #mpHud.bad .dot { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+  #mpHud.bad .mhval { color: var(--danger); }
+  .mpPing { min-height: 14px; text-align: center; font-size: 11px; letter-spacing: 1px; opacity: .75; }
+  .mpPing b { color: var(--accent); }
+
+  /* ---------- 30 s reconnect window ---------- */
+  #reconnect {
+    position: fixed; inset: 0; z-index: 11;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 10px; text-align: center; padding: 24px;
+    background: rgba(3,5,10,.55); backdrop-filter: blur(2px);
+    pointer-events: none;
+  }
+  #reconnect.hidden { display: none; }
+  #reconnect .retitle {
+    font-size: clamp(26px, 4vw, 42px); font-weight: 800; letter-spacing: 4px;
+    color: var(--accent-2); text-shadow: 0 0 34px rgba(255,209,102,.35);
+  }
+  #reconnect .resub { font-size: 13px; letter-spacing: .8px; opacity: .72; max-width: 540px; line-height: 1.6; }
+  #reconnect .retimer { font-size: 46px; font-weight: 800; color: #7fd4ff; line-height: 1.1; }
+  #reconnect .retimer span { font-size: 14px; font-weight: 400; opacity: .6; margin-left: 4px; letter-spacing: 1px; }
+
   #timer .value { color: #ffd166; }
 </style>
 </head>
@@ -316,6 +359,7 @@
       <button class="btn" id="mpJoin">Join</button>
     </div>
     <div class="mpStatus" id="mpStatus"></div>
+    <div class="mpPing" id="mpPing"></div>
     <div class="mpLobby hidden" id="mpLobby">
       <div class="mpLobbyLabel">Challenge code</div>
       <div class="mpCodeBig" id="mpCodeBig"></div>
@@ -348,6 +392,18 @@
 <div id="mpResume" class="hidden">
   <div>CLICK TO RESUME</div>
   <div class="rsub">the match is still running</div>
+</div>
+
+<div id="mpHud" class="hidden">
+  <span class="dot"></span>
+  <span>Ping</span><span class="mhval" id="mpHudPing">—</span>
+  <span class="mhmode" id="mpHudMode">P2P</span>
+</div>
+
+<div id="reconnect" class="hidden">
+  <div class="retitle" id="reconnectTitle">RECONNECTING</div>
+  <div class="resub" id="reconnectSub">the match is paused — it resumes automatically</div>
+  <div class="retimer"><span id="reconnectVal">30</span><span>s</span></div>
 </div>
 
 <div id="resultsScreen" class="overlay hidden">
@@ -1737,6 +1793,7 @@
     replayFill: document.getElementById("replayFill"),
     mp: document.getElementById("mpScreen"),
     mpStatus: document.getElementById("mpStatus"),
+    mpPing: document.getElementById("mpPing"),
     mpLobby: document.getElementById("mpLobby"),
     mpCodeBig: document.getElementById("mpCodeBig"),
     mpLink: document.getElementById("mpLink"),
@@ -1744,6 +1801,13 @@
     mpPre: document.getElementById("mpPre"),
     mpDiv: document.getElementById("mpDiv"),
     mpJoinRow: document.getElementById("mpJoinRow"),
+    mpHud: document.getElementById("mpHud"),
+    mpHudPing: document.getElementById("mpHudPing"),
+    mpHudMode: document.getElementById("mpHudMode"),
+    reconnect: document.getElementById("reconnect"),
+    reconnectTitle: document.getElementById("reconnectTitle"),
+    reconnectSub: document.getElementById("reconnectSub"),
+    reconnectVal: document.getElementById("reconnectVal"),
     countdown: document.getElementById("countdown"),
     countdownVal: document.getElementById("countdownVal"),
     respawn: document.getElementById("respawn"),
@@ -1760,14 +1824,23 @@
   const net = {
     active: false, role: null, code: "",
     ws: null, pc: null, dc: null,
-    relay: false, connected: false,
+    relay: false, connected: false, peerPresent: false,
     matchRunning: false, matchEnd: 0, duration: CFG.mp.duration, bots: 0,
     cfg: null, scores: null,
     remoteInput: { yaw: Math.PI, pitch: 0, boost: false },
     inputSeq: 0, lastSnapSent: 0, lastInputSent: 0,
     snaps: [],
     hostName: "YOU", guestName: "GUEST",
+    // ping diagnostics (measured over the game channel)
+    ping: null, pingSamples: [], pingSent: new Map(),
+    pingSeq: 0, nextPingAt: 0, pingBurst: 0,
+    // reconnect window (a refresh pauses the match for up to 30 s)
+    reconnecting: false, reconnectDeadline: 0, pauseLeft: 0,
+    resumeSent: false, lastSessionSave: 0, wsRetryT: null,
   };
+  const MP_RECONNECT_MS = 30000;
+  const MP_SESSION_KEY = "snake3d.session.v1";
+  const MP_PING_BURST = 5;
   let countdownT = 0;
   const pendingIce = [];
 
@@ -1778,7 +1851,7 @@
     ui.mines.textContent = player.mines + "/" + CFG.mine.carry;
     if (net.active && net.matchRunning) {
       ui.timerStat.style.display = "";
-      const left = Math.max(0, (net.matchEnd - performance.now()) / 1000);
+      const left = Math.max(0, (net.reconnecting ? net.pauseLeft : net.matchEnd - performance.now()) / 1000);
       const mm = Math.floor(left / 60);
       const ss = Math.floor(left % 60);
       ui.timer.textContent = mm + ":" + String(ss).padStart(2, "0");
@@ -1947,6 +2020,415 @@
   function mpStatus(text) { ui.mpStatus.textContent = text || ""; }
   function mpCoordHttp() { return MP_COORD.replace(/^ws/, "http"); }
 
+  // --- ping diagnostics -------------------------------------------------
+  // RTT is measured over the same channel that carries the game (direct
+  // DataChannel or coordinator relay), so it reflects real game latency.
+  function mpResetPing() {
+    net.ping = null;
+    net.pingSamples.length = 0;
+    net.pingSent.clear();
+    net.pingSeq = 0;
+    net.pingBurst = MP_PING_BURST;
+    net.nextPingAt = performance.now() + 120;
+    mpRenderPing();
+  }
+
+  function mpPingTick(now) {
+    if (!net.active || !net.connected || net.reconnecting) return;
+    if (now < net.nextPingAt) return;
+    const id = ++net.pingSeq;
+    net.pingSent.set(id, performance.now());
+    if (net.pingSent.size > 24) {
+      const oldest = net.pingSent.keys().next().value;
+      net.pingSent.delete(oldest);
+    }
+    mpSendGame({ c: "ping", id, t: Math.round(performance.now()) });
+    if (net.pingBurst > 0) net.pingBurst--;
+    net.nextPingAt = now + (net.pingBurst > 0 ? 220 : 1000);
+  }
+
+  function mpPingLabel() {
+    if (!net.active) return "";
+    if (!net.connected) return net.reconnecting ? "reconnecting…" : "connecting…";
+    if (net.ping === null) return "measuring…";
+    return net.ping + " ms";
+  }
+
+  function mpRenderPing() {
+    // lobby readout (both players see the same measurement)
+    if (net.active && net.connected && state.mode === "mp") {
+      const peer = net.role === "guest" ? "host" : "guest";
+      ui.mpPing.textContent = "Avg ping to " + peer + ": " + mpPingLabel() + " · " + (net.relay ? "relayed" : "direct");
+    } else {
+      ui.mpPing.textContent = "";
+    }
+
+    // in-game strip along the bottom
+    const inMatch = state.mode === "playing" || state.mode === "countdown";
+    const show = net.active && net.connected && !net.reconnecting && inMatch;
+    ui.mpHud.classList.toggle("hidden", !show);
+    if (!show) return;
+    ui.mpHudPing.textContent = net.ping === null ? "—" : net.ping + " ms";
+    ui.mpHudMode.textContent = net.relay ? "relay" : "p2p";
+    const p = net.ping;
+    ui.mpHud.classList.toggle("mid", p !== null && p >= 80 && p < 160);
+    ui.mpHud.classList.toggle("bad", p !== null && p >= 160);
+  }
+
+  // --- session persistence + 30 s reconnect window ----------------------
+  // A refresh wipes the JavaScript world, so the host keeps a compact
+  // snapshot of the authoritative match in sessionStorage (which survives a
+  // reload of this tab). The guest only needs the challenge code + config:
+  // the host will send the live world again over the channel.
+
+  function mpSessionActive() {
+    return net.active && !!net.cfg &&
+      (net.matchRunning || net.reconnecting || state.mode === "countdown");
+  }
+
+  function mpClearSession() {
+    try { sessionStorage.removeItem(MP_SESSION_KEY); } catch (e) {}
+  }
+
+  function mpSerializeWorld() {
+    return {
+      left: Math.round(net.reconnecting ? net.pauseLeft : Math.max(0, net.matchEnd - performance.now())),
+      countdown: state.mode === "countdown" ? Math.max(0, countdownT) : 0,
+      snakes: snakes.map((s) => ({
+        name: s.name,
+        h: [round2(s.head.x), round2(s.head.y), round2(s.head.z)],
+        d: [round3(s.dir.x), round3(s.dir.y), round3(s.dir.z)],
+        yaw: round3(s.yaw), pitch: round3(s.pitch),
+        len: s.bodyLen, speed: round2(s.speed), alive: !!s.alive,
+        score: s.score, mines: s.mines, resp: round2(Math.max(0, s.respawnTimer)),
+      })),
+      foods: foods.map((f) => f.active ? [round2(f.pos.x), round2(f.pos.y), round2(f.pos.z)] : null),
+      pu: powerups.map((p) => [
+        p.active ? 1 : 0,
+        round2(p.pos.x), round2(p.pos.y), round2(p.pos.z),
+        round2(Math.max(0, p.respawnT)),
+      ]),
+      mines: mines.map((m) => m.active ? [
+        round2(m.pos.x), round2(m.pos.y), round2(m.pos.z),
+        m.armed ? 1 : 0, round2(m.age), m.owner ? m.owner.name : "",
+      ] : null),
+      remote: [round3(net.remoteInput.yaw), round3(net.remoteInput.pitch), net.remoteInput.boost ? 1 : 0],
+    };
+  }
+
+  function mpSaveSession() {
+    if (!mpSessionActive()) { mpClearSession(); return; }
+    const data = {
+      v: 1,
+      t: Date.now(),
+      role: net.role,
+      code: net.code,
+      hostName: net.hostName,
+      guestName: net.guestName,
+      bots: net.bots,
+      cfg: net.cfg,
+      left: Math.round(net.reconnecting ? net.pauseLeft : Math.max(0, net.matchEnd - performance.now())),
+      countdown: state.mode === "countdown" ? Math.max(0, countdownT) : 0,
+      look: [round3(player.yaw), round3(player.pitch)],
+      match: net.role === "host" ? mpSerializeWorld() : null,
+    };
+    try { sessionStorage.setItem(MP_SESSION_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  function mpShowReconnect(title, sub) {
+    ui.reconnectTitle.textContent = title;
+    ui.reconnectSub.textContent = sub;
+    ui.reconnectVal.textContent = String(Math.ceil(MP_RECONNECT_MS / 1000));
+    ui.reconnect.classList.remove("hidden");
+    ui.mpResume.classList.add("hidden");
+  }
+
+  function mpTeardownPeer() {
+    pendingIce.length = 0;
+    if (net.dc) {
+      try { net.dc.onclose = null; net.dc.onmessage = null; net.dc.close(); } catch (e) {}
+      net.dc = null;
+    }
+    if (net.pc) { try { net.pc.close(); } catch (e) {} net.pc = null; }
+    net.connected = false;
+    net.relay = false;
+  }
+
+  function mpBeginReconnect(kind) {
+    if (!net.active || net.reconnecting) return;
+    net.reconnecting = true;
+    if (net.matchRunning) {
+      net.pauseLeft = Math.max(0, net.matchEnd - performance.now());
+      net.matchEnd = 0;
+    }
+    net.reconnectDeadline = performance.now() + MP_RECONNECT_MS;
+    net.resumeSent = false;
+    mpTeardownPeer();
+    mpShowReconnect(
+      kind === "self" ? "RECONNECTING" : "OPPONENT RECONNECTING",
+      kind === "self"
+        ? "restoring the match — this can take a moment"
+        : "the match is paused — it resumes automatically when they come back"
+    );
+    mpStatus("Reconnecting…");
+    mpRenderPing();
+    mpSaveSession();
+    mpEnsureTransport();
+    // If the signalling room is still intact (a transient channel drop), the
+    // host can renegotiate right away; peer-joined covers a refreshed guest.
+    if (net.role === "host" && net.peerPresent) {
+      setTimeout(() => {
+        if (net.active && net.reconnecting && net.peerPresent && !net.pc) mpCreateOffer();
+      }, 300);
+    }
+  }
+
+  function mpEnsureTransport() {
+    clearTimeout(net.wsRetryT);
+    net.wsRetryT = setTimeout(() => {
+      if (!net.active || !net.reconnecting) return;
+      if (!net.ws || net.ws.readyState > 1) mpConnectWs(net.code, net.role);
+    }, 600);
+  }
+
+  function mpResumeMatch() {
+    if (!net.reconnecting) return;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    net.resumeSent = false;
+    ui.reconnect.classList.add("hidden");
+    if (net.matchRunning) {
+      net.matchEnd = performance.now() + Math.max(0, net.pauseLeft);
+      net.snaps.length = 0;
+      net.lastSnapSent = 0;
+      net.lastInputSent = 0;
+      if (state.mode !== "playing") setMode("playing");
+      if (document.pointerLockElement !== renderer.domElement) {
+        ui.mpResume.classList.remove("hidden");
+      }
+    }
+    mpStatus(net.relay ? "Reconnected (relayed)" : "Reconnected (direct)");
+    mpResetPing();
+    mpSaveSession();
+  }
+
+  function mpReconnectExpired() {
+    if (!net.reconnecting) return;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    net.matchRunning = false;
+    ui.reconnect.classList.add("hidden");
+    ui.mpResume.classList.add("hidden");
+    ui.respawn.classList.add("hidden");
+    clearTimeout(net.wsRetryT);
+    mpTeardownPeer();
+    if (net.ws) { try { net.ws.onclose = null; net.ws.close(); } catch (e) {} net.ws = null; }
+    net.active = false;
+    net.peerPresent = false;
+    const scores = snakes.map((s) => ({ name: s.name, score: s.score, len: s.bodyLen, human: s.isHuman }));
+    net.scores = scores;
+    document.exitPointerLock && document.exitPointerLock();
+    showResults(scores, "Opponent disconnected");
+    ui.resultsRematch.style.display = "none";
+    mpClearSession();
+    mpRenderPing();
+  }
+
+  function mpRestoreCommon(s) {
+    net.active = true;
+    net.role = s.role === "guest" ? "guest" : "host";
+    net.code = s.code;
+    net.hostName = s.hostName || "YOU";
+    net.guestName = s.guestName || "GUEST";
+    net.bots = s.bots || 0;
+    net.cfg = s.cfg;
+    net.duration = (s.cfg && s.cfg.duration) || CFG.mp.duration;
+    net.snaps.length = 0;
+    net.peerPresent = false;
+    net.connected = false;
+    net.relay = false;
+    net.reconnecting = true;
+    net.pauseLeft = Math.max(0, s.left || 0);
+    net.reconnectDeadline = performance.now() + MP_RECONNECT_MS;
+    net.resumeSent = false;
+    net.lastSessionSave = 0;
+    ui.mpResume.classList.add("hidden");
+    ui.reconnect.classList.add("hidden");
+    ui.respawn.classList.add("hidden");
+  }
+
+  function mpRestoreHostWorld(s) {
+    const m = s.match || {};
+    const cfg = { ...(s.cfg || {}), role: "host" };
+    net.cfg = cfg;
+    net.duration = cfg.duration || CFG.mp.duration;
+    net.bots = cfg.bots || 0;
+    const n = 2 + net.bots;
+    const a = arenaFor(n);
+    applyArena(a.ax, a.az);
+    foodCount = foodFor(n);
+    setupVersus(cfg);
+    resetGame();
+    ui.mp.classList.add("hidden");
+    ui.start.classList.add("hidden");
+    ui.results.classList.add("hidden");
+
+    const saved = Array.isArray(m.snakes) ? m.snakes : [];
+    for (let i = 0; i < snakes.length; i++) {
+      const sn = snakes[i], d = saved[i];
+      if (!d) continue;
+      if (Array.isArray(d.h)) sn.head.set(d.h[0], d.h[1], d.h[2]);
+      if (Array.isArray(d.d)) sn.dir.set(d.d[0], d.d[1], d.d[2]);
+      if (sn.dir.lengthSq() < 1e-6) sn.dir.set(0, 0, -1); else sn.dir.normalize();
+      sn.bodyLen = Math.max(2, Math.min(CFG.maxLen, d.len || CFG.startLen));
+      sn.speed = d.speed || sn.speed;
+      sn.score = d.score || 0;
+      sn.mines = d.mines || 0;
+      sn.alive = d.alive !== false;
+      sn.respawnTimer = Math.max(0, d.resp || 0);
+      if (Number.isFinite(d.yaw)) sn.yaw = d.yaw;
+      if (Number.isFinite(d.pitch)) sn.pitch = d.pitch;
+      if (sn.alive) {
+        sn.path.length = 0;
+        sn.initPath();
+        sn.layoutBody();
+      } else {
+        for (const mesh of sn.segs) mesh.visible = false;
+        sn.path.length = 0;
+      }
+    }
+
+    const fl = Array.isArray(m.foods) ? m.foods : [];
+    for (let i = 0; i < foods.length; i++) {
+      const f = foods[i], d = fl[i];
+      if (d) {
+        f.active = true;
+        f.pos.set(d[0], d[1], d[2]);
+        f.mesh.position.copy(f.pos);
+        f.mesh.visible = true;
+      } else {
+        f.active = false;
+        f.mesh.visible = false;
+      }
+    }
+    const pl = Array.isArray(m.pu) ? m.pu : [];
+    for (let i = 0; i < powerups.length; i++) {
+      const p = powerups[i], d = pl[i];
+      if (d) {
+        p.active = d[0] !== 0;
+        p.pos.set(d[1], d[2], d[3]);
+        p.respawnT = Math.max(0, d[4] || 0);
+        p.mesh.position.copy(p.pos);
+        p.mesh.visible = p.active;
+      } else {
+        p.active = false;
+        p.mesh.visible = false;
+      }
+    }
+    const ml = Array.isArray(m.mines) ? m.mines : [];
+    for (let i = 0; i < mines.length; i++) {
+      const mi = mines[i], d = ml[i];
+      if (d) {
+        mi.active = true;
+        mi.pos.set(d[0], d[1], d[2]);
+        mi.armed = d[3] > 0.5;
+        mi.age = d[4] || 1;
+        mi.owner = d[5] ? (snakes.find((sn) => sn.name === d[5]) || null) : null;
+        mi.vel.set(0, 0, 0);
+        mi.mesh.position.copy(mi.pos);
+        mi.mesh.visible = true;
+      } else {
+        mi.active = false;
+        mi.mesh.visible = false;
+        mi.owner = null;
+      }
+    }
+    if (Array.isArray(m.remote)) {
+      net.remoteInput.yaw = Number(m.remote[0]) || 0;
+      net.remoteInput.pitch = Number(m.remote[1]) || 0;
+      net.remoteInput.boost = !!m.remote[2];
+    }
+
+    if (m.countdown > 0) {
+      countdownT = m.countdown;
+      ui.countdownVal.textContent = String(Math.max(1, Math.ceil(countdownT)));
+      net.matchRunning = false;
+      setMode("countdown");
+    } else {
+      net.matchRunning = true;
+      setMode("playing");
+    }
+    if (!player.alive) {
+      deathCam.origin.copy(player.head);
+      deathCam.t = 0;
+      deathCam.angle = Math.atan2(-player.dir.z, -player.dir.x);
+      state.deathT = 0;
+      ui.respawnCause.textContent = "You crashed";
+      ui.respawnVal.textContent = String(Math.max(0, Math.ceil(player.respawnTimer)));
+      ui.respawn.classList.remove("hidden");
+    }
+  }
+
+  function mpRestoreGuestWorld(cfgIn, left, countdown, look) {
+    const cfg = { ...(cfgIn || net.cfg || {}), role: "guest" };
+    net.cfg = cfg;
+    net.duration = cfg.duration || CFG.mp.duration;
+    net.bots = cfg.bots || 0;
+    const n = 2 + net.bots;
+    const a = arenaFor(n);
+    applyArena(a.ax, a.az);
+    foodCount = foodFor(n);
+    setupVersus(cfg);
+    resetGame();
+    ui.mp.classList.add("hidden");
+    ui.start.classList.add("hidden");
+    ui.results.classList.add("hidden");
+    ui.mpResume.classList.add("hidden");
+    if (Array.isArray(look)) {
+      player.yaw = Number(look[0]) || 0;
+      player.pitch = Number(look[1]) || 0;
+    }
+    net.pauseLeft = Math.max(0, left || 0);
+    if (countdown > 0) {
+      countdownT = countdown;
+      ui.countdownVal.textContent = String(Math.max(1, Math.ceil(countdownT)));
+      net.matchRunning = false;
+      setMode("countdown");
+    } else {
+      net.matchRunning = true;
+      setMode("playing");
+    }
+  }
+
+  // Returns true when a refresh dropped us into a paused match that we can
+  // rejoin automatically.
+  function mpRestoreSession() {
+    let raw = null;
+    try { raw = sessionStorage.getItem(MP_SESSION_KEY); } catch (e) { return false; }
+    if (!raw) return false;
+    let s = null;
+    try { s = JSON.parse(raw); } catch (e) {}
+    mpClearSession();
+    if (!s || s.v !== 1 || !s.cfg || !s.code || !s.role) return false;
+    // the reconnect window has to still be open
+    if (!s.t || Date.now() - s.t > MP_RECONNECT_MS) return false;
+
+    mpRestoreCommon(s);
+    if (net.role === "host" && s.match) mpRestoreHostWorld(s);
+    else mpRestoreGuestWorld(s.cfg, s.left, s.countdown, s.look);
+
+    net.reconnecting = true;
+    net.reconnectDeadline = performance.now() + MP_RECONNECT_MS;
+    mpShowReconnect(
+      "RECONNECTING",
+      "the match is paused — rejoining challenge " + net.code + " automatically"
+    );
+    mpStatus("Reconnecting…");
+    mpRenderPing();
+    mpConnectWs(net.code, net.role);
+    return true;
+  }
+
   function mpShowLobby(code, role) {
     ui.mpLobby.classList.remove("hidden");
     ui.mpCodeBig.textContent = code;
@@ -1977,9 +2459,15 @@
     net.active = true;
     net.connected = false;
     net.relay = false;
+    net.peerPresent = false;
     net.matchRunning = false;
+    net.reconnecting = false;
+    net.pauseLeft = 0;
+    net.resumeSent = false;
     net.snaps.length = 0;
     pendingIce.length = 0;
+    mpClearSession();
+    mpResetPing();
     mpStatus("Creating challenge…");
     try {
       const res = await fetch(mpCoordHttp() + "/create", { method: "POST" });
@@ -2006,10 +2494,16 @@
     net.active = true;
     net.connected = false;
     net.relay = false;
+    net.peerPresent = false;
     net.matchRunning = false;
+    net.reconnecting = false;
+    net.pauseLeft = 0;
+    net.resumeSent = false;
     net.code = code;
     net.snaps.length = 0;
     pendingIce.length = 0;
+    mpClearSession();
+    mpResetPing();
     mpShowLobby(code, "guest");
     mpStatus("Connecting…");
     mpConnectWs(code, "guest");
@@ -2028,20 +2522,42 @@
       let msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
       mpHandleSignal(msg);
     };
-    ws.onclose = () => { if (net.active && !net.connected) mpStatus("Connection closed"); };
+    ws.onclose = () => {
+      if (net.ws !== ws) return;
+      net.ws = null;
+      if (!net.active) return;
+      if (!net.connected) mpStatus("Connection closed");
+      // If the room link dropped but the match is still alive, windows-open:
+      // reconnect the coordinator socket so the peer can find us again.
+      if (net.reconnecting || net.matchRunning || state.mode === "countdown") {
+        setTimeout(() => {
+          if (net.active && (!net.ws || net.ws.readyState > 1)) mpConnectWs(net.code, net.role);
+        }, 700);
+      }
+    };
     ws.onerror = () => { mpStatus("Coordinator unreachable"); };
   }
 
   function mpHandleSignal(msg) {
     switch (msg.c) {
       case "welcome":
-        if (msg.role === "host" && msg.peers >= 2) mpCreateOffer();
+        net.peerPresent = msg.peers >= 2;
+        if (net.role === "host" && msg.peers >= 2) {
+          if (net.reconnecting) mpTeardownPeer();
+          mpCreateOffer();
+        }
+        mpSaveSession();
         break;
       case "peer-joined":
-        mpStatus("Opponent joined — connecting…");
-        if (net.role === "host") mpCreateOffer();
+        net.peerPresent = true;
+        mpStatus(net.reconnecting ? "Opponent is back — reconnecting…" : "Opponent joined — connecting…");
+        if (net.role === "host") {
+          if (net.reconnecting) mpTeardownPeer();
+          mpCreateOffer();
+        }
         break;
       case "peer-left":
+        net.peerPresent = false;
         mpPeerLeft();
         break;
       case "signal":
@@ -2054,7 +2570,7 @@
   }
 
   async function mpCreateOffer() {
-    if (net.pc) return;
+    if (net.pc || !net.peerPresent) return;
     const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
     net.pc = pc;
     mpSetupChannel(pc.createDataChannel("game", { ordered: true }));
@@ -2065,7 +2581,7 @@
       await pc.setLocalDescription(offer);
       mpSendSignal({ type: "offer", sdp: pc.localDescription });
     } catch (e) { mpFallback(); }
-    setTimeout(() => { if (!net.connected) mpFallback(); }, CFG.mp.relayTimeout);
+    setTimeout(() => { if (!net.connected && net.peerPresent) mpFallback(); }, CFG.mp.relayTimeout);
   }
 
   async function mpHandlePeerSignal(d) {
@@ -2127,24 +2643,43 @@
       let msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
       mpHandleGame(msg);
     };
-    dc.onclose = () => { if (net.active && net.matchRunning) mpPeerLeft(); };
+    dc.onclose = () => {
+      if (net.dc !== dc) return;
+      net.dc = null;
+      if (!net.active) return;
+      if (net.matchRunning || net.reconnecting || state.mode === "countdown") {
+        mpPeerLeft();
+      } else {
+        net.connected = false;
+        net.relay = false;
+        mpStatus("Opponent disconnected");
+        ui.mpAction.disabled = true;
+        mpRenderPing();
+      }
+    };
   }
 
   function mpFallback() {
-    if (net.connected || net.relay) return;
+    if (net.connected || net.relay || !net.peerPresent) return;
     net.relay = true;
     net.connected = true;
     mpOnConnected();
   }
 
   function mpOnConnected() {
+    net.peerPresent = true;
     mpStatus(net.relay ? "Connected (relayed)" : "Connected (direct)");
+    mpResetPing();
     if (net.role === "host") {
-      ui.mpAction.disabled = false;
-      ui.mpAction.textContent = "Start match";
+      if (!net.reconnecting && !net.matchRunning) {
+        ui.mpAction.disabled = false;
+        ui.mpAction.textContent = "Start match";
+      }
     } else {
-      mpSendGame({ c: "hello", name: net.guestName });
+      mpSendGame({ c: "hello", name: net.guestName, rejoin: !!net.reconnecting });
     }
+    mpRenderPing();
+    mpSaveSession();
   }
 
   function mpSendGame(msg) {
@@ -2159,7 +2694,22 @@
     if (!msg) return;
     switch (msg.c) {
       case "hello":
-        if (net.role === "host") net.guestName = String(msg.name || "GUEST").slice(0, 12);
+        if (net.role === "host") {
+          net.guestName = String(msg.name || "GUEST").slice(0, 12);
+          net.peerPresent = true;
+          if (net.reconnecting && net.cfg && (net.matchRunning || state.mode === "countdown")) {
+            const countdown = state.mode === "countdown" ? Math.max(0, countdownT) : 0;
+            mpSendGame({
+              c: "resume",
+              cfg: net.cfg,
+              left: Math.round(net.pauseLeft),
+              countdown,
+              look: [round3(net.remoteInput.yaw), round3(net.remoteInput.pitch)],
+            });
+            net.resumeSent = true;
+            mpStatus("Opponent is back — resuming…");
+          }
+        }
         break;
       case "config":
         if (net.role === "guest") {
@@ -2172,7 +2722,7 @@
         }
         break;
       case "ready":
-        if (net.role === "host" && !net.matchRunning) {
+        if (net.role === "host" && !net.matchRunning && !net.reconnecting) {
           mpSendGame({ c: "go", cfg: net.cfg });
           mpStartMatch(net.cfg, "host");
         }
@@ -2201,6 +2751,45 @@
         break;
       case "rematch":
         if (net.role === "guest") mpBackToLobby();
+        break;
+      case "ping":
+        mpSendGame({ c: "pong", id: msg.id, t: msg.t });
+        break;
+      case "pong": {
+        const sent = net.pingSent.get(msg.id);
+        if (sent !== undefined) {
+          net.pingSent.delete(msg.id);
+          const rtt = Math.max(0, performance.now() - sent);
+          net.pingSamples.push(rtt);
+          while (net.pingSamples.length > 8) net.pingSamples.shift();
+          net.ping = Math.round(net.pingSamples.reduce((a, b) => a + b, 0) / net.pingSamples.length);
+          mpRenderPing();
+        }
+        break;
+      }
+      case "resume":
+        if (net.role === "guest" && net.reconnecting && msg.cfg) {
+          const inScene = net.cfg && (state.mode === "playing" || state.mode === "countdown");
+          if (!inScene) {
+            mpRestoreGuestWorld(msg.cfg, msg.left, msg.countdown, msg.look);
+          } else {
+            net.pauseLeft = Math.max(0, msg.left || 0);
+            if (msg.countdown > 0) {
+              countdownT = msg.countdown;
+              ui.countdownVal.textContent = String(Math.max(1, Math.ceil(countdownT)));
+              net.matchRunning = false;
+              setMode("countdown");
+            } else {
+              net.matchRunning = true;
+              if (state.mode !== "playing") setMode("playing");
+            }
+          }
+          mpSendGame({ c: "resume-ack" });
+          mpResumeMatch();
+        }
+        break;
+      case "resume-ack":
+        if (net.role === "host" && net.reconnecting) mpResumeMatch();
         break;
     }
   }
@@ -2249,6 +2838,11 @@
     net.cfg = cfg;
     net.duration = cfg.duration || CFG.mp.duration;
     net.bots = cfg.bots || 0;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    net.pauseLeft = 0;
+    net.resumeSent = false;
+    net.matchEnd = 0;
     const n = 2 + net.bots;
     const a = arenaFor(n);
     applyArena(a.ax, a.az);
@@ -2261,19 +2855,29 @@
     ui.results.classList.add("hidden");
     ui.mpResume.classList.add("hidden");
     ui.respawn.classList.add("hidden");
+    ui.reconnect.classList.add("hidden");
     countdownT = 3.2;
     ui.countdownVal.textContent = "3";
     ui.countdown.classList.remove("hidden");
     setMode("countdown");
+    net.lastSessionSave = 0;
+    mpSaveSession();
+    mpRenderPing();
   }
 
   function mpEndMatch(scores) {
     if (!net.matchRunning) return;
     net.matchRunning = false;
     net.scores = scores;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    clearTimeout(net.wsRetryT);
     ui.mpResume.classList.add("hidden");
     ui.respawn.classList.add("hidden");
+    ui.reconnect.classList.add("hidden");
     document.exitPointerLock && document.exitPointerLock();
+    mpClearSession();
+    mpRenderPing();
     showResults(scores);
   }
 
@@ -2283,7 +2887,13 @@
     const scores = snakes.map((s) => ({ name: s.name, score: s.score, len: s.bodyLen, human: s.isHuman }));
     net.scores = scores;
     mpSendGame({ c: "end", scores });
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    clearTimeout(net.wsRetryT);
+    ui.reconnect.classList.add("hidden");
     document.exitPointerLock && document.exitPointerLock();
+    mpClearSession();
+    mpRenderPing();
     showResults(scores);
   }
 
@@ -2311,6 +2921,12 @@
 
   function mpBackToLobby() {
     net.matchRunning = false;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    clearTimeout(net.wsRetryT);
+    mpClearSession();
+    ui.reconnect.classList.add("hidden");
+    ui.mpResume.classList.add("hidden");
     ui.results.classList.add("hidden");
     ui.countdown.classList.add("hidden");
     ui.respawn.classList.add("hidden");
@@ -2320,24 +2936,23 @@
     ui.mpAction.textContent = net.role === "host" ? "Start match" : "Ready up";
     ui.mpAction.disabled = net.role !== "host";
     setMode("mp");
+    mpRenderPing();
   }
 
   function mpPeerLeft() {
     if (!net.active) return;
-    mpStatus("Opponent disconnected");
-    // tear the peer link down so a rejoin can renegotiate
-    if (net.dc) { try { net.dc.close(); } catch (e) {} net.dc = null; }
-    if (net.pc) { try { net.pc.close(); } catch (e) {} net.pc = null; }
-    net.connected = false;
-    net.relay = false;
-    if (net.matchRunning) {
-      net.matchRunning = false;
-      ui.mpResume.classList.add("hidden");
-      ui.respawn.classList.add("hidden");
-      document.exitPointerLock && document.exitPointerLock();
-      showResults(net.scores || [], "Opponent disconnected");
+    if (net.reconnecting) return;
+    // A dropped peer pauses the match instead of ending it: both sides have
+    // MP_RECONNECT_MS to get back (a refresh rejoins automatically).
+    if (net.matchRunning || state.mode === "countdown") {
+      net.connected = false;
+      net.relay = false;
+      mpBeginReconnect("peer");
     } else {
+      mpTeardownPeer();
+      mpStatus("Opponent disconnected");
       ui.mpAction.disabled = true;
+      mpRenderPing();
     }
   }
 
@@ -2347,18 +2962,31 @@
     net.matchRunning = false;
     net.connected = false;
     net.relay = false;
+    net.peerPresent = false;
+    net.reconnecting = false;
+    net.reconnectDeadline = 0;
+    net.pauseLeft = 0;
+    net.resumeSent = false;
+    clearTimeout(net.wsRetryT);
     net.cfg = null;
     net.scores = null;
     net.snaps.length = 0;
     pendingIce.length = 0;
-    if (net.dc) { try { net.dc.close(); } catch (e) {} net.dc = null; }
+    mpClearSession();
+    mpResetPing();
+    if (net.dc) {
+      try { net.dc.onclose = null; net.dc.close(); } catch (e) {}
+      net.dc = null;
+    }
     if (net.pc) { try { net.pc.close(); } catch (e) {} net.pc = null; }
     if (net.ws) { try { net.ws.close(); } catch (e) {} net.ws = null; }
     ui.mpResume.classList.add("hidden");
     ui.respawn.classList.add("hidden");
+    ui.reconnect.classList.add("hidden");
     ui.results.classList.add("hidden");
     ui.countdown.classList.add("hidden");
     ui.mp.classList.add("hidden");
+    mpRenderPing();
   }
 
   function requestFire() {
@@ -2592,6 +3220,7 @@
     if (showCams) layoutCornerFrames();
     for (const el of cornerEls) el.style.display = (showCams && !replay.open) ? "block" : "none";
     if (m !== "playing") ui.mpResume.classList.add("hidden");
+    mpRenderPing();
   }
 
   // The player crashed. Their body bursts into orbs and the arena carries on
@@ -3421,24 +4050,51 @@
     last = now;
     if (dt > 0.05) dt = 0.05; // clamp big gaps
 
+    mpPingTick(now);
+
+    // Reconnect bookkeeping: count down the 30 s window, keep the session
+    // state fresh, and freeze the world while the peer is away.
+    if (net.active && (net.matchRunning || net.reconnecting || state.mode === "countdown")) {
+      if (net.reconnecting) {
+        const left = Math.max(0, (net.reconnectDeadline - now) / 1000);
+        ui.reconnectVal.textContent = String(Math.ceil(left));
+        if (left <= 0) mpReconnectExpired();
+        hudTimer -= dt;
+        if (hudTimer <= 0) {
+          hudTimer = 0.15;
+          updateHUD();
+          updateRivalsHUD();
+        }
+      }
+      if (now - net.lastSessionSave > 1000) {
+        net.lastSessionSave = now;
+        mpSaveSession();
+      }
+    }
+
     if (state.mode === "countdown") {
-      countdownT -= dt;
-      ui.countdownVal.textContent = String(Math.max(1, Math.ceil(countdownT)));
+      if (!net.reconnecting) {
+        countdownT -= dt;
+        ui.countdownVal.textContent = String(Math.max(1, Math.ceil(countdownT)));
+      }
       camera.position.copy(player.head);
       camera.rotation.set(player.pitch, player.yaw, 0, "YXZ");
       playerHead.position.copy(player.head);
       playerHead.visible = true;
-      if (countdownT <= 0) {
+      if (!net.reconnecting && countdownT <= 0) {
         ui.countdown.classList.add("hidden");
         net.matchEnd = performance.now() + net.duration * 1000;
         net.matchRunning = true;
         setMode("playing");
         updateHUD();
         updateRivalsHUD();
+        mpSaveSession();
         if (net.active && document.pointerLockElement !== renderer.domElement) {
           ui.mpResume.classList.remove("hidden");
         }
       }
+    } else if (state.mode === "playing" && net.reconnecting) {
+      // frozen mid-match: leave the arena and HUD exactly where they were
     } else if (state.mode === "playing") {
       if (net.active && net.role === "guest") {
         mpGuestFrame(dt, now);
@@ -3526,12 +4182,14 @@
       }
     }
 
-    // food pulse animation (always)
-    foodPulse += dt;
-    for (const f of foods) {
-      const s = 1 + Math.sin(foodPulse * 4 + f.phase) * 0.08;
-      f.mesh.scale.setScalar(s);
-      f.mesh.rotation.y += dt * 0.8;
+    // food pulse animation (always, except while a reconnect freeze is active)
+    if (!net.reconnecting) {
+      foodPulse += dt;
+      for (const f of foods) {
+        const s = 1 + Math.sin(foodPulse * 4 + f.phase) * 0.08;
+        f.mesh.scale.setScalar(s);
+        f.mesh.rotation.y += dt * 0.8;
+      }
     }
 
     // keep the lens clear of orbs that are practically touching it
@@ -3567,9 +4225,18 @@
   resetGame();
   setMode("ready");
 
+  // A refresh during a match drops the page back into the paused match for 30 s.
+  mpRestoreSession();
+
+  // Persist the authoritative match as late as possible before a reload.
+  window.addEventListener("pagehide", () => { if (net.active) mpSaveSession(); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden" && net.active) mpSaveSession();
+  });
+
   // challenge links: ?join=CODE opens multiplayer and joins automatically
   const joinCode = new URLSearchParams(location.search).get("join");
-  if (joinCode) {
+  if (joinCode && !net.active) {
     setMode("mp");
     document.getElementById("mpCode").value = joinCode.toUpperCase();
     setTimeout(() => { if (!net.active) mpJoinGame(); }, 400);

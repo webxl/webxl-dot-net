@@ -31,6 +31,15 @@ function json(body, status = 200) {
   });
 }
 
+function isReplaced(ws) {
+  try {
+    const att = ws.deserializeAttachment ? ws.deserializeAttachment() : null;
+    return !!(att && att.replaced);
+  } catch (e) {
+    return false;
+  }
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -75,21 +84,23 @@ export class Room {
     if (role !== "host" && role !== "guest") {
       return new Response("bad role", { status: 400 });
     }
+    const otherRole = role === "host" ? "guest" : "host";
 
-    const all = this.state.getWebSockets();
-    if (all.length >= 2) return new Response("room full", { status: 409 });
-    if (this.state.getWebSockets(role).length > 0) {
-      return new Response("role taken", { status: 409 });
+    // A refresh reconnects with the same role while the old socket may still
+    // look alive. Replace it instead of rejecting the rejoin, but suppress the
+    // peer-left notification for the replaced socket.
+    for (const old of this.state.getWebSockets(role)) {
+      try { old.serializeAttachment({ replaced: true }); } catch (e) {}
+      try { old.close(1000, "replaced"); } catch (e) {}
     }
 
     const pair = new WebSocketPair();
     const [client, server] = Object.values(pair);
     this.state.acceptWebSocket(server, [role]);
 
-    const peers = this.state.getWebSockets().length;
+    const peers = 1 + this.state.getWebSockets(otherRole).length;
     this.send(server, { c: "welcome", role, peers });
 
-    const otherRole = role === "host" ? "guest" : "host";
     for (const other of this.state.getWebSockets(otherRole)) {
       this.send(other, { c: "peer-joined", role });
     }
@@ -98,7 +109,9 @@ export class Room {
   }
 
   webSocketMessage(ws, message) {
-    const role = this.state.getTags(ws)[0];
+    if (isReplaced(ws)) return;
+    const role = this.state.getTags(ws).find((t) => t === "host" || t === "guest");
+    if (!role) return;
     const otherRole = role === "host" ? "guest" : "host";
     for (const other of this.state.getWebSockets(otherRole)) {
       this.send(other, message);
@@ -106,7 +119,9 @@ export class Room {
   }
 
   webSocketClose(ws) {
-    const role = this.state.getTags(ws)[0];
+    if (isReplaced(ws)) return;
+    const role = this.state.getTags(ws).find((t) => t === "host" || t === "guest");
+    if (!role) return;
     const otherRole = role === "host" ? "guest" : "host";
     for (const other of this.state.getWebSockets(otherRole)) {
       this.send(other, { c: "peer-left" });
