@@ -40,6 +40,7 @@
   #score .value { color: var(--accent); }
   #len .value { color: #7fd4ff; }
   #spd .value { color: var(--accent-2); }
+  #mines .value { color: #ff9f43; }
   #rivals { display: flex; flex-direction: row; align-items: center; gap: 16px; font-size: 12px; }
   #rivals .rlabel { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; opacity: .55; }
   #rivals .rrow { display: flex; gap: 7px; align-items: center; }
@@ -154,6 +155,7 @@
   .big { font-size: clamp(34px, 6vw, 64px); font-weight: 800; }
   .final { font-size: 22px; opacity: .9; }
   .final b { color: var(--accent); font-size: 30px; }
+  .cause { font-size: 15px; letter-spacing: .6px; color: var(--accent-2); opacity: .95; }
   #finalRivals { font-size: 14px !important; opacity: .7 !important; letter-spacing: 1px; }
   .newbest { color: var(--accent-2); font-weight: 700; letter-spacing: 1px; }
 
@@ -203,6 +205,7 @@
     <div class="stat" id="score"><span class="label">Score</span><span class="value" id="scoreVal">0</span></div>
     <div class="stat" id="len"><span class="label">Length</span><span class="value" id="lenVal">0</span></div>
     <div class="stat" id="spd"><span class="label">Speed</span><span class="value" id="spdVal">0</span></div>
+    <div class="stat" id="mines"><span class="label">Mines</span><span class="value" id="mineVal">0/3</span></div>
   </div>
   <div id="rivals"><span class="rlabel">Rivals</span></div>
 </div>
@@ -210,10 +213,11 @@
 
 <div id="startScreen" class="overlay">
   <div class="title">SNAKE·3D</div>
-  <div class="subtitle">You are the snake. Fly through a 3D arena, chomp glowing orbs, and grow — but three rival snakes (VIPER, COBRA, MAMBA) hunt the same orbs. Don't touch the walls, your own body, or a rival's body. If a rival's head clips your tail, they die instead. Crash and your body bursts into orbs for the rivals to feast on — the arena keeps playing while you watch.</div>
+  <div class="subtitle">You are the snake. Fly through a 3D arena, chomp glowing orbs, and grow — but three rival snakes (VIPER, COBRA, MAMBA) hunt the same orbs. Don't touch the walls, your own body, or a rival's body. If a rival's head clips your tail, they die instead. Grab pink power-ups for mines — Space or left click launches one ahead; it arms, then kills anything that touches it, including you. Crash and your body bursts into orbs for the rivals to feast on — the arena keeps playing while you watch.</div>
   <div class="keys">
     <span><kbd>Mouse</kbd> steer (yaw + pitch)</span>
     <span><kbd>Shift</kbd> / <kbd>Right Click</kbd> boost</span>
+    <span><kbd>Space</kbd> / <kbd>Left Click</kbd> launch mine</span>
     <span><kbd>F</kbd> wall reflections</span>
     <span><kbd>Esc</kbd> pause</span>
   </div>
@@ -229,6 +233,7 @@
 <div id="overScreen" class="hidden">
   <div class="overPanel">
     <div class="big" style="color:var(--danger)">CRASHED</div>
+    <div class="final cause" id="finalCause"></div>
     <div class="final">Score <b id="finalScore">0</b> &nbsp;·&nbsp; Length <b id="finalLen">0</b></div>
     <div class="final" id="finalRivals"></div>
     <div class="newbest hidden" id="newBest">★ NEW BEST ★</div>
@@ -290,6 +295,21 @@
       respawn: [2.5, 4.5],                  // dead -> respawn delay range (s)
       lookAhead: [1.5, 3, 5, 7.5],          // probe distances when scoring a heading
       safeClear: 1.6,                       // clearance below this is heavily penalized
+    },
+    mine: {
+      pool: 24,                             // max mines in the arena at once
+      carry: 3,                             // max mines a snake can hold
+      pickups: 4,                           // max power-up pickups in the arena
+      pickupRespawn: 8,                     // seconds until a collected pickup returns
+      launchSpeed: 46,                      // initial forward speed
+      drag: 1.8,                            // velocity decay (exp) -> ~25u reach
+      arm: 0.45,                            // seconds before it can detonate
+      life: 12,                             // seconds before it fizzles out
+      killRadius: 1.5,                      // head<->mine distance that detonates
+      cooldown: 0.4,                        // seconds between launches
+      score: 25,                            // points for a kill
+      burst: 24,                            // food orbs from a mine kill
+      debrisLife: 60,                       // wreckage lifetime (s)
     },
   };
 
@@ -493,6 +513,8 @@
       this.alive = true;
       this.respawnTimer = 0;
       this.steerTimer = 0;
+      this.mines = 0;
+      this.fireCd = 0;
       this.path = [];
       this.segs = [];
       this._euler = new THREE.Euler(0, 0, 0, "YXZ");
@@ -526,6 +548,8 @@
       this.alive = true;
       this.respawnTimer = 0;
       this.steerTimer = Math.random() * CFG.cpu.steerEvery;
+      this.mines = 0;
+      this.fireCd = 0;
       this.initPath();
       this.layoutBody();
     }
@@ -700,7 +724,7 @@
   // Explosion debris: when the player crashes, every body segment becomes a
   // food orb. Each orb borrows the material of the segment it came from, so the
   // wreckage keeps the snake's exact colour gradient — and rivals can eat it.
-  const DEBRIS_MAX = CFG.maxLen + 24;
+  const DEBRIS_MAX = CFG.maxLen + 24 + CFG.mine.burst * 8;
   const debrisGroup = new THREE.Group();
   scene.add(debrisGroup);
 
@@ -717,7 +741,7 @@
       debrisGroup.add(mesh);
       debris.push({
         mesh, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
-        active: false, age: 0, phase: Math.random() * Math.PI * 2,
+        active: false, age: 0, life: 0, phase: Math.random() * Math.PI * 2,
       });
     }
   }
@@ -733,22 +757,39 @@
   }
 
   // One orb per visible segment of `segs[0..count)`, thrown outward from the
-  // body's centroid. Returns the number of orbs spawned.
-  function explodeBody(segs, count, pool) {
-    _blastC.set(0, 0, 0);
-    let n = 0;
+  // body's centroid. `maxOrbs` samples evenly along the body (so a compact
+  // burst still carries the full colour gradient). Returns the orbs spawned.
+  function explodeBody(segs, count, pool, maxOrbs) {
+    const idx = [];
     for (let i = 0; i < count; i++) {
-      if (segs[i].visible) { _blastC.add(segs[i].position); n++; }
+      if (segs[i].visible) idx.push(i);
     }
-    if (n === 0) return 0;
-    _blastC.multiplyScalar(1 / n);
-    let k = 0;
-    for (let i = 0; i < count && k < pool.length; i++) {
-      const seg = segs[i];
-      if (!seg.visible) continue;
-      const d = pool[k++];
+    if (idx.length === 0) return 0;
+
+    _blastC.set(0, 0, 0);
+    for (const i of idx) _blastC.add(segs[i].position);
+    _blastC.multiplyScalar(1 / idx.length);
+
+    const want = Math.min(
+      maxOrbs === undefined ? idx.length : Math.min(maxOrbs, idx.length),
+      pool.length
+    );
+    // fill free slots first; only recycle live wreckage if the pool runs dry
+    const slots = [];
+    for (let i = 0; i < pool.length && slots.length < want; i++) {
+      if (!pool[i].active) slots.push(i);
+    }
+    for (let i = 0; i < pool.length && slots.length < want; i++) {
+      if (pool[i].active) slots.push(i);
+    }
+
+    for (let j = 0; j < want; j++) {
+      const t = want === 1 ? 0 : j / (want - 1);
+      const seg = segs[idx[Math.round(t * (idx.length - 1))]];
+      const d = pool[slots[j]];
       d.active = true;
       d.age = 0;
+      d.life = CFG.mine.debrisLife;
       d.pos.copy(seg.position);
       d.vel.copy(seg.position).sub(_blastC);
       if (d.vel.lengthSq() < 1e-6) d.vel.set(0, 1, 0); else d.vel.normalize();
@@ -760,15 +801,22 @@
       d.mesh.scale.setScalar(0.01);
       d.mesh.visible = true;
     }
-    return k;
+    return want;
   }
 
-  // Drifting wreckage: scatter velocity eased away, orbs pop in and then pulse.
+  // Drifting wreckage: scatter velocity eased away, orbs pop in, pulse, and
+  // eventually shrink away so long matches don't silt up the arena.
   function updatePool(pool, dt, time) {
     const damp = Math.exp(-1.7 * dt);
     for (const d of pool) {
       if (!d.active) continue;
       d.age += dt;
+      d.life -= dt;
+      if (d.life <= 0) {
+        d.active = false;
+        d.mesh.visible = false;
+        continue;
+      }
       d.vel.multiplyScalar(damp);
       d.pos.addScaledVector(d.vel, dt);
       const lim = 1.2;
@@ -780,7 +828,8 @@
       if (d.pos.z >  AZ - lim) { d.pos.z =  AZ - lim; d.vel.z *= -0.35; }
       d.mesh.position.copy(d.pos);
       const pop = Math.min(1, d.age / 0.22);
-      d.mesh.scale.setScalar(pop * (1 + Math.sin(time * 4.5 + d.phase) * 0.12));
+      const fade = Math.min(1, d.life / 4);          // shrink away at the end
+      d.mesh.scale.setScalar(pop * fade * (1 + Math.sin(time * 4.5 + d.phase) * 0.12));
       d.mesh.rotation.y += dt * 0.9;
     }
   }
@@ -790,6 +839,263 @@
   function cullNearCamera(pool, camPos, r2) {
     for (const d of pool) {
       if (d.active) d.mesh.visible = d.pos.distanceToSquared(camPos) > r2;
+    }
+  }
+
+  // ------------------------------------------------------------------
+  // Power-ups (mine ammo) + mines + detonation shockwaves
+  // ------------------------------------------------------------------
+  const powerGroup = new THREE.Group();
+  scene.add(powerGroup);
+  const powerups = [];
+  {
+    const geo = new THREE.OctahedronGeometry(0.55, 0);
+    const ringGeo = new THREE.TorusGeometry(0.95, 0.035, 6, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff9fd0, transparent: true, opacity: 0.75 });
+    for (let i = 0; i < CFG.mine.pickups; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0xff4d9e, emissive: 0xff4d9e, emissiveIntensity: 0.9,
+        roughness: 0.25, metalness: 0.4,
+      }));
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      mesh.add(ring);
+      mesh.visible = false;
+      powerGroup.add(mesh);
+      powerups.push({
+        mesh, ring, pos: new THREE.Vector3(),
+        active: false, respawnT: 0, phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function spawnPowerup(p) {
+    randomFoodPos(p.pos);
+    p.mesh.position.copy(p.pos);
+    p.active = true;
+    p.mesh.visible = true;
+  }
+
+  function resetPowerups() {
+    // scale with the roster: 1 pickup for a duel, up to 4 in a busy arena
+    const n = Math.max(1, Math.min(powerups.length, Math.round(snakes.length / 2)));
+    powerups.forEach((p, i) => {
+      p.respawnT = 0;
+      if (i < n) spawnPowerup(p);
+      else { p.active = false; p.mesh.visible = false; }
+    });
+  }
+
+  function updatePowerups(dt, time) {
+    for (const p of powerups) {
+      if (!p.active) {
+        if (p.respawnT > 0) {
+          p.respawnT -= dt;
+          if (p.respawnT <= 0) spawnPowerup(p);
+        }
+        continue;
+      }
+      p.mesh.position.set(p.pos.x, p.pos.y + Math.sin(time * 2 + p.phase) * 0.25, p.pos.z);
+      p.mesh.rotation.y += dt * 1.4;
+      p.ring.rotation.z += dt * 2.2;
+      p.mesh.scale.setScalar(1 + Math.sin(time * 4 + p.phase) * 0.1);
+    }
+  }
+
+  // Only human players pick these up — the CPU rivals don't fire mines.
+  function collectPowerups() {
+    const r2 = CFG.eatRadius * CFG.eatRadius;
+    for (const s of snakes) {
+      if (!s.alive || !s.isPlayer) continue;
+      for (const p of powerups) {
+        if (!p.active) continue;
+        if (p.mesh.position.distanceToSquared(s.head) < r2) {
+          p.active = false;
+          p.mesh.visible = false;
+          p.respawnT = CFG.mine.pickupRespawn;
+          s.mines = Math.min(CFG.mine.carry, s.mines + 1);
+          sfxPower();
+          updateHUD();
+          break;
+        }
+      }
+    }
+  }
+
+  const mineGroup = new THREE.Group();
+  scene.add(mineGroup);
+  const mines = [];
+  {
+    const geo = new THREE.OctahedronGeometry(0.5, 0);
+    const cageGeo = new THREE.EdgesGeometry(geo);
+    for (let i = 0; i < CFG.mine.pool; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0xff9f43, emissive: 0xff9f43, emissiveIntensity: 0.9,
+        roughness: 0.3, metalness: 0.5,
+      }));
+      const cage = new THREE.LineSegments(cageGeo, new THREE.LineBasicMaterial({
+        color: 0xffc078, transparent: true, opacity: 0.9,
+      }));
+      mesh.add(cage);
+      mesh.visible = false;
+      mineGroup.add(mesh);
+      mines.push({
+        mesh, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
+        active: false, armed: false, age: 0, owner: null,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  function resetMines() {
+    for (const m of mines) {
+      m.active = false;
+      m.armed = false;
+      m.owner = null;
+      m.vel.set(0, 0, 0);
+      m.mesh.visible = false;
+    }
+  }
+
+  function spawnMine(s) {
+    let m = null;
+    for (const x of mines) { if (!x.active) { m = x; break; } }
+    if (!m) return false;
+    m.active = true;
+    m.armed = false;
+    m.age = 0;
+    m.owner = s;
+    m.pos.copy(s.head).addScaledVector(s.dir, 1.2);
+    m.vel.copy(s.dir).multiplyScalar(CFG.mine.launchSpeed);
+    m.mesh.position.copy(m.pos);
+    m.mesh.rotation.set(0, 0, 0);
+    m.mesh.scale.setScalar(0.4);
+    m.mesh.material.emissiveIntensity = 0.7;
+    m.mesh.visible = true;
+    return true;
+  }
+
+  function fireMine(s) {
+    if (!s.alive || s.mines <= 0 || s.fireCd > 0) return;
+    if (!spawnMine(s)) return;
+    s.mines--;
+    s.fireCd = CFG.mine.cooldown;
+    sfxLaunch();
+    updateHUD();
+  }
+
+  // Shared kill path: the player uses the existing death flow (which handles
+  // its own full-body blast), rivals burst into a compact coloured food burst.
+  function killSnake(victim, killer) {
+    if (!victim.alive) return;
+    if (victim.isPlayer) {
+      const mineCause = !killer ? "a mine"
+        : killer === victim ? "your own mine"
+        : killer.name + "'s mine";
+      playerDied(mineCause);
+    } else {
+      explodeBody(victim.segs, victim.bodyLen, debris, CFG.mine.burst);
+      victim.die();
+      victim.respawnTimer = CFG.cpu.respawn[0] + Math.random() * (CFG.cpu.respawn[1] - CFG.cpu.respawn[0]);
+      sfxCpuDie();
+    }
+    if (killer && killer !== victim && killer.isPlayer && killer.alive) {
+      killer.score += CFG.mine.score;
+      updateHUD();
+    }
+  }
+
+  function makeWavePool(parent, count) {
+    const geo = new THREE.IcosahedronGeometry(1, 1);
+    const pool = [];
+    for (let i = 0; i < count; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+        color: 0xffb066, transparent: true, opacity: 0.9,
+        wireframe: true, depthWrite: false,
+      }));
+      mesh.visible = false;
+      parent.add(mesh);
+      pool.push({ mesh, age: 0, active: false, max: 0.45 });
+    }
+    return pool;
+  }
+
+  function spawnWave(pool, pos) {
+    let w = null;
+    for (const x of pool) { if (!x.active) { w = x; break; } }
+    if (!w) w = pool[0];
+    w.active = true;
+    w.age = 0;
+    w.mesh.position.copy(pos);
+    w.mesh.scale.setScalar(0.4);
+    w.mesh.material.opacity = 0.9;
+    w.mesh.visible = true;
+  }
+
+  function updateWaves(pool, dt) {
+    for (const w of pool) {
+      if (!w.active) continue;
+      w.age += dt;
+      const t = w.age / w.max;
+      if (t >= 1) { w.active = false; w.mesh.visible = false; continue; }
+      w.mesh.scale.setScalar(0.4 + t * 5.5);
+      w.mesh.material.opacity = 0.9 * (1 - t);
+      w.mesh.rotation.y += dt * 2;
+    }
+  }
+
+  const shockwaves = makeWavePool(scene, 6);
+
+  function detonateMine(m, victim) {
+    m.active = false;
+    m.mesh.visible = false;
+    m.vel.set(0, 0, 0);
+    spawnWave(shockwaves, m.pos);
+    sfxMineBlast();
+    if (victim) killSnake(victim, m.owner);
+  }
+
+  function updateMines(dt, time) {
+    const r2 = CFG.mine.killRadius * CFG.mine.killRadius;
+    for (const m of mines) {
+      if (!m.active) continue;
+      m.age += dt;
+      if (m.age >= CFG.mine.life) {
+        m.active = false;
+        m.mesh.visible = false;
+        continue;
+      }
+      if (!m.armed && m.age >= CFG.mine.arm) m.armed = true;
+
+      // launch momentum bleeds off; it settles like a mine
+      m.vel.multiplyScalar(Math.exp(-CFG.mine.drag * dt));
+      m.pos.addScaledVector(m.vel, dt);
+      const lim = 1.0;
+      if (m.pos.x < -AX + lim) { m.pos.x = -AX + lim; m.vel.set(0, 0, 0); }
+      if (m.pos.x >  AX - lim) { m.pos.x =  AX - lim; m.vel.set(0, 0, 0); }
+      if (m.pos.y < lim)       { m.pos.y = lim;       m.vel.set(0, 0, 0); }
+      if (m.pos.y > AY - lim)  { m.pos.y = AY - lim;  m.vel.set(0, 0, 0); }
+      if (m.pos.z < -AZ + lim) { m.pos.z = -AZ + lim; m.vel.set(0, 0, 0); }
+      if (m.pos.z >  AZ - lim) { m.pos.z =  AZ - lim; m.vel.set(0, 0, 0); }
+
+      m.mesh.position.copy(m.pos);
+      m.mesh.rotation.y += dt * 1.6;
+      m.mesh.rotation.x += dt * 0.9;
+      const blink = m.armed
+        ? 0.8 + 0.2 * Math.sin(time * (m.age > CFG.mine.life - 2 ? 18 : 7) + m.phase)
+        : 0.55;
+      m.mesh.scale.setScalar(Math.min(1, m.age / 0.15) * blink);
+      m.mesh.material.emissiveIntensity = m.armed ? 1.2 : 0.6;
+
+      // detonate on head contact; the owner is safe until it arms
+      for (const s of snakes) {
+        if (!s.alive) continue;
+        if (s === m.owner && !m.armed) continue;
+        if (s.head.distanceToSquared(m.pos) < r2) {
+          detonateMine(m, s);
+          break;
+        }
+      }
     }
   }
 
@@ -882,32 +1188,54 @@
     beep(180, 0.5, "sawtooth", 0.18, 42);
     beep(96, 0.75, "square", 0.1, 30);
   };
+  const sfxPower = () => { beep(660, 0.14, "triangle", 0.16, 1320); };
+  const sfxLaunch = () => { beep(300, 0.12, "square", 0.09, 140); };
+  const sfxMineBlast = () => {
+    beep(120, 0.4, "sawtooth", 0.15, 40);
+    beep(70, 0.5, "square", 0.09, 28);
+  };
 
   // ------------------------------------------------------------------
   // Collision helpers
   // ------------------------------------------------------------------
   function hitWalls(p) {
-    const m = CFG.wallMargin;
-    return p.x < -AX + m || p.x > AX - m || p.y < m || p.y > AY - m || p.z < -AZ + m || p.z > AZ - m;
+    return wallHitName(p) !== null;
   }
 
-  // head of `s` vs every other snake's body + its own body (skipping the neck)
-  function hitBodies(s) {
+  // Which arena face did `p` cross? Names are absolute (the arena doesn't move).
+  function wallHitName(p) {
+    const m = CFG.wallMargin;
+    if (p.x < -AX + m) return "the left wall";
+    if (p.x >  AX - m) return "the right wall";
+    if (p.y <  m)      return "the floor";
+    if (p.y >  AY - m) return "the ceiling";
+    if (p.z < -AZ + m) return "the far wall";
+    if (p.z >  AZ - m) return "the near wall";
+    return null;
+  }
+
+  // head of `s` vs every other snake's body + its own body (skipping the neck).
+  // Returns the name of what it hit, or null.
+  function bodyHitName(s) {
     const h2 = CFG.collideDist * CFG.collideDist;
     for (const o of snakes) {
       if (o === s || !o.alive) continue;
       for (let i = 0; i < o.bodyLen; i++) {
         const m = o.segs[i];
         if (!m.visible) continue;
-        if (m.position.distanceToSquared(s.head) < h2) return true;
+        if (m.position.distanceToSquared(s.head) < h2) return o.name;
       }
     }
     for (let i = CFG.skipSelf; i < s.bodyLen; i++) {
       const m = s.segs[i];
       if (!m.visible) continue;
-      if (m.position.distanceToSquared(s.head) < h2) return true;
+      if (m.position.distanceToSquared(s.head) < h2) return "your own body";
     }
-    return false;
+    return null;
+  }
+
+  function hitBodies(s) {
+    return bodyHitName(s) !== null;
   }
 
   // Smallest clearance of point `p` to walls or any snake body.
@@ -1171,11 +1499,13 @@
     score: document.getElementById("scoreVal"),
     len: document.getElementById("lenVal"),
     spd: document.getElementById("spdVal"),
+    mines: document.getElementById("mineVal"),
     start: document.getElementById("startScreen"),
     pause: document.getElementById("pauseScreen"),
     over: document.getElementById("overScreen"),
     finalScore: document.getElementById("finalScore"),
     finalLen: document.getElementById("finalLen"),
+    finalCause: document.getElementById("finalCause"),
     finalRivals: document.getElementById("finalRivals"),
     newBest: document.getElementById("newBest"),
     replayModal: document.getElementById("replayModal"),
@@ -1186,6 +1516,7 @@
     ui.score.textContent = player.score;
     ui.len.textContent = player.bodyLen;
     ui.spd.textContent = Math.round(player.speed);
+    ui.mines.textContent = player.mines + "/" + CFG.mine.carry;
   }
 
   // rivals leaderboard rows
@@ -1232,9 +1563,13 @@
     }
     for (const f of foods) spawnFood(f);
     resetPool(debris);
+    resetPowerups();
+    resetMines();
+    for (const w of shockwaves) { w.active = false; w.mesh.visible = false; }
     replay.open = false;
     ui.replayModal.classList.add("hidden");
     ui.over.classList.remove("show");
+    ui.finalCause.textContent = "";
     camera.position.copy(player.head);
     camera.rotation.set(0, 0, 0, "YXZ");
     camera.fov = 78;
@@ -1262,7 +1597,7 @@
   // The player crashed. Their body bursts into orbs and the arena carries on
   // without them — rivals keep hunting, respawn and eat the wreckage — while a
   // slow pull-out replays the moment. The score panel fades in over the top.
-  function playerDied() {
+  function playerDied(cause) {
     if (state.mode !== "playing") return;
     explodeBody(player.segs, player.bodyLen, debris);   // body -> coloured orbs
     player.die();
@@ -1275,6 +1610,7 @@
       best = player.score;
       try { localStorage.setItem("fp_snake_best", String(best)); } catch (e) {}
     }
+    ui.finalCause.textContent = cause ? "You crashed into " + cause : "";
     ui.finalScore.textContent = player.score;
     ui.finalLen.textContent = player.bodyLen;
     ui.finalRivals.textContent = "Rivals  " + cpus.map((s) => `${s.name} ${s.alive ? s.bodyLen : "×"}`).join("  ·  ");
@@ -1320,10 +1656,14 @@
   // final wide framing of the crash site during the zoom-out
   const WIDE = { r: 54, up: 17 };
 
-  // sample layout: [head(3) dir(3) len(1) alive(1)] per snake, then orb xyz
+  // sample layout: [head(3) dir(3) len(1) alive(1)] per snake, then food xyz,
+  // then pickup xyz, then mines as (xyz + armed)
   const SNAKE_STRIDE = 8;
   const FOOD_OFF = snakes.length * SNAKE_STRIDE;
-  const SAMPLE_LEN = FOOD_OFF + foods.length * 3;
+  const POWER_OFF = FOOD_OFF + foods.length * 3;
+  const MINE_OFF = POWER_OFF + powerups.length * 3;
+  const SAMPLE_LEN = MINE_OFF + mines.length * 4;
+  const SENTINEL = 1e9;
 
   const rec = { t: 0, times: [], blobs: [], dying: false, deathT: 0, frozen: false };
 
@@ -1344,6 +1684,26 @@
     for (let i = 0; i < foods.length; i++) {
       const o = FOOD_OFF + i * 3, p = foods[i].pos;
       s[o] = p.x; s[o + 1] = p.y; s[o + 2] = p.z;
+    }
+    for (let i = 0; i < powerups.length; i++) {
+      const o = POWER_OFF + i * 3;
+      if (powerups[i].active) {
+        const p = powerups[i].mesh.position;
+        s[o] = p.x; s[o + 1] = p.y; s[o + 2] = p.z;
+      } else {
+        s[o] = s[o + 1] = s[o + 2] = SENTINEL;
+      }
+    }
+    for (let i = 0; i < mines.length; i++) {
+      const o = MINE_OFF + i * 4;
+      if (mines[i].active) {
+        const p = mines[i].pos;
+        s[o] = p.x; s[o + 1] = p.y; s[o + 2] = p.z;
+        s[o + 3] = mines[i].armed ? 1 : 0;
+      } else {
+        s[o] = s[o + 1] = s[o + 2] = SENTINEL;
+        s[o + 3] = 0;
+      }
     }
     rec.times.push(rec.t);
     rec.blobs.push(s);
@@ -1463,10 +1823,50 @@
       replayScene.add(m);
       ghostDebris.push({
         mesh: m, pos: new THREE.Vector3(), vel: new THREE.Vector3(),
-        active: false, age: 0, phase: Math.random() * Math.PI * 2,
+        active: false, age: 0, life: 0, phase: Math.random() * Math.PI * 2,
       });
     }
   }
+
+  const ghostPowerups = [];
+  {
+    const geo = new THREE.OctahedronGeometry(0.55, 0);
+    const ringGeo = new THREE.TorusGeometry(0.95, 0.035, 6, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xff9fd0, transparent: true, opacity: 0.75 });
+    for (let i = 0; i < powerups.length; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0xff4d9e, emissive: 0xff4d9e, emissiveIntensity: 0.9,
+        roughness: 0.25, metalness: 0.4,
+      }));
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.rotation.x = Math.PI / 2;
+      mesh.add(ring);
+      mesh.visible = false;
+      replayScene.add(mesh);
+      ghostPowerups.push({ mesh, ring });
+    }
+  }
+
+  const ghostMines = [];
+  {
+    const geo = new THREE.OctahedronGeometry(0.5, 0);
+    const cageGeo = new THREE.EdgesGeometry(geo);
+    for (let i = 0; i < mines.length; i++) {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+        color: 0xff9f43, emissive: 0xff9f43, emissiveIntensity: 0.9,
+        roughness: 0.3, metalness: 0.5,
+      }));
+      const cage = new THREE.LineSegments(cageGeo, new THREE.LineBasicMaterial({
+        color: 0xffc078, transparent: true, opacity: 0.9,
+      }));
+      mesh.add(cage);
+      mesh.visible = false;
+      replayScene.add(mesh);
+      ghostMines.push({ mesh, armed: false });
+    }
+  }
+
+  const ghostWaves = makeWavePool(replayScene, 4);
 
   const replayCam = new THREE.PerspectiveCamera(66, 16 / 9, 0.1, 500);
 
@@ -1545,6 +1945,9 @@
       for (let k = 0; k < CFG.maxLen; k++) g.segs[k].visible = false;
     }
     resetPool(ghostDebris);
+    for (const g of ghostPowerups) g.mesh.visible = false;
+    for (const g of ghostMines) g.mesh.visible = false;
+    for (const w of ghostWaves) { w.active = false; w.mesh.visible = false; }
     if (ui.replayFill) ui.replayFill.style.width = "0%";
   }
 
@@ -1589,16 +1992,20 @@
       const g = ghosts[s], o = s * SNAKE_STRIDE;
 
       if (!(A[o + 7] > 0.5)) {                 // dead in the recording
-        // The instant the player dies, burst the ghost body into coloured orbs
-        // — the same blast the live arena performed.
-        if (s === 0 && !replay.exploded && replay.prevAlive[0] && g.alive) {
-          explodeBody(g.segs, g.bodyLen, ghostDebris);
-          replay.blastPos.copy(_blastC);
-          replay.exploded = true;
-          replay.explodeT = replay.elapsed;
-          replay.wideAngle = Math.atan2(
-            replay.camPos.z - _blastC.z, replay.camPos.x - _blastC.x
-          );
+        if (replay.prevAlive[s] && g.alive) {
+          // burst the ghost body into coloured orbs, exactly like the live sim
+          if (s === 0) {
+            explodeBody(g.segs, g.bodyLen, ghostDebris);
+            replay.blastPos.copy(_blastC);
+            replay.exploded = true;
+            replay.explodeT = replay.elapsed;
+            replay.wideAngle = Math.atan2(
+              replay.camPos.z - _blastC.z, replay.camPos.x - _blastC.x
+            );
+          } else {
+            explodeBody(g.segs, g.bodyLen, ghostDebris, CFG.mine.burst);
+          }
+          spawnWave(ghostWaves, _blastC);
         }
         if (g.alive) {
           g.alive = false;
@@ -1644,7 +2051,44 @@
       );
     }
 
+    // pickups (sentinels mark inactive slots; snap instead of lerping past them)
+    for (let k = 0; k < ghostPowerups.length; k++) {
+      const o = POWER_OFF + k * 3;
+      const g = ghostPowerups[k];
+      const ax = A[o], ay = A[o + 1], az = A[o + 2];
+      const bx = B[o], by = B[o + 1], bz = B[o + 2];
+      if (ax > 1e8 && bx > 1e8) { g.mesh.visible = false; continue; }
+      const x = ax > 1e8 ? bx : (bx > 1e8 ? ax : ax + (bx - ax) * f);
+      const y = ay > 1e8 ? by : (by > 1e8 ? ay : ay + (by - ay) * f);
+      const z = az > 1e8 ? bz : (bz > 1e8 ? az : az + (bz - az) * f);
+      g.mesh.position.set(x, y + Math.sin(replay.elapsed * 2 + k) * 0.25, z);
+      g.mesh.rotation.y += dt * 1.4;
+      g.ring.rotation.z += dt * 2.2;
+      g.mesh.visible = true;
+    }
+
+    // mines
+    for (let k = 0; k < ghostMines.length; k++) {
+      const o = MINE_OFF + k * 4;
+      const g = ghostMines[k];
+      const ax = A[o], ay = A[o + 1], az = A[o + 2];
+      const bx = B[o], by = B[o + 1], bz = B[o + 2];
+      if (ax > 1e8 && bx > 1e8) { g.mesh.visible = false; continue; }
+      const x = ax > 1e8 ? bx : (bx > 1e8 ? ax : ax + (bx - ax) * f);
+      const y = ay > 1e8 ? by : (by > 1e8 ? ay : ay + (by - ay) * f);
+      const z = az > 1e8 ? bz : (bz > 1e8 ? az : az + (bz - az) * f);
+      g.armed = (ax > 1e8 ? B[o + 3] : A[o + 3]) > 0.5;
+      g.mesh.position.set(x, y, z);
+      g.mesh.rotation.y += dt * 1.6;
+      g.mesh.rotation.x += dt * 0.9;
+      const blink = g.armed ? 0.8 + 0.2 * Math.sin(replay.elapsed * 9 + k) : 0.55;
+      g.mesh.scale.setScalar(blink);
+      g.mesh.material.emissiveIntensity = g.armed ? 1.2 : 0.6;
+      g.mesh.visible = true;
+    }
+
     updatePool(ghostDebris, dt, replay.elapsed);
+    updateWaves(ghostWaves, dt);
     updateReplayCam(dt);
 
     // keep the lens clear of orbs that are practically touching it
@@ -1733,6 +2177,8 @@
   });
   window.addEventListener("mousedown", (e) => {
     if (e.button === 2) boostMouse = true;
+    // left click fires a mine too (only while actually playing)
+    else if (e.button === 0 && state.mode === "playing") fireMine(player);
   });
   window.addEventListener("mouseup", (e) => {
     if (e.button === 2) boostMouse = false;
@@ -1750,6 +2196,15 @@
     if (e.key === "f" || e.key === "F") {
       reflectionsOn = !reflectionsOn;
       for (const m of mirrors) m.visible = reflectionsOn;
+    }
+  });
+
+  // Space fires a mine if you're carrying one (and only while playing, so it
+  // still activates focused buttons on the menus)
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && state.mode === "playing") {
+      e.preventDefault();
+      if (!e.repeat) fireMine(player);
     }
   });
 
@@ -1839,13 +2294,23 @@
       // --- CPU rivals ---
       for (const s of cpus) updateCPU(s, dt);
 
-      // --- orbs ---
+      // --- orbs, pickups, mines ---
       eatAll();
+      collectPowerups();
+      updatePowerups(dt, now / 1000);
+      for (const s of snakes) if (s.fireCd > 0) s.fireCd = Math.max(0, s.fireCd - dt);
+      updateMines(dt, now / 1000);
+      updatePool(debris, dt, now / 1000);
+      updateWaves(shockwaves, dt);
 
       // --- record the frame, then check for death ---
       rec.t += dt;
       recordFrame();
-      if (hitWalls(player.head) || hitBodies(player)) playerDied();
+      if (state.mode === "playing") {
+        const wall = wallHitName(player.head);
+        const body = wall ? null : bodyHitName(player);
+        if (wall || body) playerDied(wall || body);
+      }
 
       hudTimer -= dt;
       if (hudTimer <= 0) {
@@ -1859,7 +2324,10 @@
       // rolling for a beat so the replay captures the blast and its aftermath.
       for (const s of cpus) updateCPU(s, dt);
       eatAll();
+      updatePowerups(dt, now / 1000);
+      updateMines(dt, now / 1000);
       updatePool(debris, dt, now / 1000);
+      updateWaves(shockwaves, dt);
       if (!rec.frozen) {
         rec.t += dt;
         recordFrame();
